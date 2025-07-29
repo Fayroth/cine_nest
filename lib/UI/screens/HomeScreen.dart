@@ -249,8 +249,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildActionCard(String title, IconData icon, String subtitle, String destination) {
-    return ElevatedButton(
-        onPressed: () {
+    return GestureDetector(
+        onTap: () {
       Navigator.pushNamed(context, '/$destination');},
         child:
         Container(

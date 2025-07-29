@@ -239,17 +239,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         padding: EdgeInsets.symmetric(horizontal: 20),
         child: Row(
           children: [
-            Expanded(child: _buildActionCard('My Watchlist', Icons.bookmark_outline, '12 movies')),
+            Expanded(child: _buildActionCard('My Watchlist', Icons.bookmark_outline, '12 movies','watchlist'), ),
             SizedBox(width: 16),
-            Expanded(child: _buildActionCard('My Ratings', Icons.star_outline, '47 rated')),
+            Expanded(child: _buildActionCard('My Ratings', Icons.star_outline, '47 rated','ratings')),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildActionCard(String title, IconData icon, String subtitle) {
-    return Container(
+  Widget _buildActionCard(String title, IconData icon, String subtitle, String destination) {
+    return ElevatedButton(
+        onPressed: () {
+      Navigator.pushNamed(context, '/$destination');},
+        child:
+        Container(
       padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Color(0xFF1A1F2E),
@@ -286,6 +290,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ],
       ),
+    )
     );
   }
 

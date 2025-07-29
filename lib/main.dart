@@ -1,4 +1,5 @@
 import 'package:cine_nest/UI/screens/HomeScreen.dart';
+import 'package:cine_nest/UI/screens/WatchList.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -12,6 +13,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'CineNest',
+      initialRoute: '/home',
+      routes: {
+        '/home' : (context) => HomeScreen(),
+        '/watchlist' : (context) => WatchlistScreen()
+      },
       home: HomeScreen(),
     );
   }

@@ -79,27 +79,31 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
     },
   ];
 
+  // Cache filtered items to avoid rebuilding
+  List<Map<String, dynamic>>? _cachedFilteredItems;
+  String? _lastFilter;
+
   @override
   void initState() {
     super.initState();
+
+    // Reduced animation duration for faster feel
     _animationController = AnimationController(
-      duration: Duration(milliseconds: 800),
+      duration: Duration(milliseconds: 400), // Reduced from 800ms
       vsync: this,
     );
 
-
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic), // Better curve
     );
 
     _slideAnimation = Tween<Offset>(
-      begin: Offset(0, 0.3),
+      begin: Offset(0, 0.1), // Reduced from 0.3 for subtler animation
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOut));
+    ).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic));
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _animationController.forward();
-    });
+    // Start animation immediately without waiting for post frame callback
+    _animationController.forward();
   }
 
   @override
@@ -109,13 +113,24 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
   }
 
   List<Map<String, dynamic>> get filteredItems {
-    if (selectedFilter == 'All') return watchlistItems;
-    if (selectedFilter == 'Movies') return watchlistItems.where((item) => item['type'] == 'Movie').toList();
-    if (selectedFilter == 'TV Shows') return watchlistItems.where((item) => item['type'] == 'TV Show').toList();
-    if (selectedFilter == 'Recently Added') {
-      return List.from(watchlistItems)..sort((a, b) => a['dateAdded'].compareTo(b['dateAdded']));
+    // Cache filtered results to avoid repeated filtering
+    if (_lastFilter != selectedFilter || _cachedFilteredItems == null) {
+      _lastFilter = selectedFilter;
+
+      if (selectedFilter == 'All') {
+        _cachedFilteredItems = watchlistItems;
+      } else if (selectedFilter == 'Movies') {
+        _cachedFilteredItems = watchlistItems.where((item) => item['type'] == 'Movie').toList();
+      } else if (selectedFilter == 'TV Shows') {
+        _cachedFilteredItems = watchlistItems.where((item) => item['type'] == 'TV Show').toList();
+      } else if (selectedFilter == 'Recently Added') {
+        _cachedFilteredItems = List.from(watchlistItems)..sort((a, b) => a['dateAdded'].compareTo(b['dateAdded']));
+      } else {
+        _cachedFilteredItems = watchlistItems;
+      }
     }
-    return watchlistItems;
+
+    return _cachedFilteredItems!;
   }
 
   @override
@@ -347,7 +362,7 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
       ),
       itemCount: filteredItems.length,
       itemBuilder: (context, index) {
-        return _buildGridItem(filteredItems[index]);
+        return _buildGridItem(filteredItems[index], index);
       },
     );
   }
@@ -357,12 +372,13 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
       physics: BouncingScrollPhysics(),
       itemCount: filteredItems.length,
       itemBuilder: (context, index) {
-        return _buildListItem(filteredItems[index]);
+        return _buildListItem(filteredItems[index], index);
       },
     );
   }
 
-  Widget _buildGridItem(Map<String, dynamic> item) {
+  // Add index parameter for potential future staggered animations
+  Widget _buildGridItem(Map<String, dynamic> item, int index) {
     return Container(
       decoration: BoxDecoration(
         color: Color(0xFF1A1F2E),
@@ -440,7 +456,7 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
     );
   }
 
-  Widget _buildListItem(Map<String, dynamic> item) {
+  Widget _buildListItem(Map<String, dynamic> item, int index) {
     return Container(
       margin: EdgeInsets.only(bottom: 16),
       padding: EdgeInsets.all(16),
@@ -624,18 +640,21 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
             ),
           ),
           SizedBox(height: 32),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            decoration: BoxDecoration(
-              color: Color(0xFFE6B17A),
-              borderRadius: BorderRadius.circular(25),
-            ),
-            child: Text(
-              'Explore Movies',
-              style: TextStyle(
-                color: Color(0xFF0A0E1A),
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              decoration: BoxDecoration(
+                color: Color(0xFFE6B17A),
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: Text(
+                'Explore Movies',
+                style: TextStyle(
+                  color: Color(0xFF0A0E1A),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -692,6 +711,7 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
   void _removeFromWatchlist(Map<String, dynamic> item) {
     setState(() {
       watchlistItems.removeWhere((element) => element['title'] == item['title']);
+      _cachedFilteredItems = null; // Clear cache when data changes
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -706,6 +726,7 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
           onPressed: () {
             setState(() {
               watchlistItems.add(item);
+              _cachedFilteredItems = null; // Clear cache when data changes
             });
           },
         ),

@@ -395,55 +395,48 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
               ),
             ),
           ),
-          Container(
-            height: 100, // Fixed height for consistent layout
-            padding: EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Title with fixed height
-                SizedBox(
-                  height: 40, // Fixed height for title area
-                  child: Text(
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
                     item['title'],
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      height: 1.2,
                     ),
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                SizedBox(height: 8),
-                // Genre and year
-                Text(
-                  '${item['year']} • ${item['genre']}',
-                  style: TextStyle(
-                    color: Color(0xFF8B94A8),
-                    fontSize: 12,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Spacer(),
-                // Rating at bottom
-                Row(
-                  children: [
-                    Icon(Icons.star, color: Color(0xFFE6B17A), size: 14),
-                    SizedBox(width: 2),
-                    Text(
-                      '${item['rating']}',
-                      style: TextStyle(
-                        color: Color(0xFFE6B17A),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  SizedBox(height: 4),
+                  Text(
+                    '${item['year']} • ${item['genre']}',
+                    style: TextStyle(
+                      color: Color(0xFF8B94A8),
+                      fontSize: 12,
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                  Spacer(),
+                  Row(
+                    children: [
+                      Icon(Icons.star, color: Color(0xFFE6B17A), size: 14),
+                      SizedBox(width: 2),
+                      Text(
+                        '${item['rating']}',
+                        style: TextStyle(
+                          color: Color(0xFFE6B17A),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -482,7 +475,7 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                   ),
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: 8),

@@ -701,17 +701,21 @@ class _RatingDetailsSheet extends StatefulWidget {
 class _RatingDetailsSheetState extends State<_RatingDetailsSheet> {
   late double currentRating;
   late TextEditingController reviewController;
+  late ScrollController scrollController;
+  bool isTextFieldFocused = false;
 
   @override
   void initState() {
     super.initState();
     currentRating = widget.item['userRating'].toDouble();
     reviewController = TextEditingController(text: widget.item['review'] ?? '');
+    scrollController = ScrollController();
   }
 
   @override
   void dispose() {
     reviewController.dispose();
+    scrollController.dispose();
     super.dispose();
   }
 
@@ -737,11 +741,12 @@ class _RatingDetailsSheetState extends State<_RatingDetailsSheet> {
           ),
           Expanded(
             child: SingleChildScrollView(
+              controller: scrollController,
               padding: EdgeInsets.only(
                 left: 20,
                 right: 20,
                 top: 20,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                bottom: 20,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -867,14 +872,34 @@ class _RatingDetailsSheetState extends State<_RatingDetailsSheet> {
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: Color(0xFF2A3142), width: 1),
                     ),
-                    child: TextField(
-                      controller: reviewController,
-                      maxLines: 5,
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                      decoration: InputDecoration(
-                        hintText: 'Share your thoughts about this ${widget.item['type'].toLowerCase()}...',
-                        hintStyle: TextStyle(color: Color(0xFF8B94A8)),
-                        border: InputBorder.none,
+                    child: Focus(
+                      onFocusChange: (hasFocus) {
+                        setState(() {
+                          isTextFieldFocused = hasFocus;
+                        });
+
+                        if (hasFocus) {
+                          // Wait for keyboard to appear, then scroll to text field
+                          Future.delayed(Duration(milliseconds: 300), () {
+                            if (scrollController.hasClients) {
+                              scrollController.animateTo(
+                                scrollController.position.maxScrollExtent,
+                                duration: Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                            }
+                          });
+                        }
+                      },
+                      child: TextField(
+                        controller: reviewController,
+                        maxLines: 5,
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                        decoration: InputDecoration(
+                          hintText: 'Share your thoughts about this ${widget.item['type'].toLowerCase()}...',
+                          hintStyle: TextStyle(color: Color(0xFF8B94A8)),
+                          border: InputBorder.none,
+                        ),
                       ),
                     ),
                   ),
@@ -941,6 +966,8 @@ class _RatingDetailsSheetState extends State<_RatingDetailsSheet> {
                       ),
                     ],
                   ),
+                  // Add extra spacing at bottom when keyboard is visible
+                  SizedBox(height: isTextFieldFocused ? MediaQuery.of(context).viewInsets.bottom + 100 : 0),
                 ],
               ),
             ),

@@ -171,8 +171,8 @@ class _RatingsScreenState extends State<RatingsScreen> with TickerProviderStateM
             child: Column(
               children: [
                 _buildAppBar(),
-                _buildStatsSection(),
-                _buildSortAndFilter(),
+                _buildCompactStats(),
+                _buildFilters(),
                 Expanded(child: _buildRatingsList()),
               ],
             ),
@@ -255,154 +255,86 @@ class _RatingsScreenState extends State<RatingsScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildStatsSection() {
+  Widget _buildCompactStats() {
     final totalRatings = ratedItems.length;
-    final avgRating = ratedItems.fold(0.0, (sum, item) => sum + item['userRating']) / totalRatings;
     final perfectScoreCount = ratedItems.where((item) => item['userRating'] == 10).length;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        padding: EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF2A3142),
-              Color(0xFF1A1F2E),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Color(0xFF3A4155), width: 1),
-        ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStatCard('${avgRating.toStringAsFixed(1)}', 'Avg Rating', Icons.star),
-                _buildStatCard('$totalRatings', 'Total Rated', Icons.movie_filter),
-                _buildStatCard('$perfectScoreCount', 'Perfect 10s', Icons.emoji_events),
-              ],
-            ),
-            SizedBox(height: 20),
-            _buildRatingDistribution(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String value, String label, IconData icon) {
-    return Column(
-      children: [
-        Container(
-          padding: EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Color(0xFFE6B17A).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: Color(0xFFE6B17A), size: 24),
-        ),
-        SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            color: Color(0xFF8B94A8),
-            fontSize: 12,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRatingDistribution() {
-    final distribution = <int, int>{};
-    for (var item in ratedItems) {
-      final rating = (item['userRating'] as num).toInt();
-      distribution[rating] = (distribution[rating] ?? 0) + 1;
-    }
-
-    return Column(
-      children: List.generate(5, (index) {
-        final rating = 10 - (index * 2); // 10, 8, 6, 4, 2
-        final ratingPlus = rating - 1; // 9, 7, 5, 3, 1
-        final count = (distribution[rating] ?? 0) + (distribution[ratingPlus] ?? 0);
-        final percentage = count / ratedItems.length;
-
-        return Padding(
-          padding: EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              Text(
-                '${rating}-${ratingPlus}',
-                style: TextStyle(color: Color(0xFF8B94A8), fontSize: 12),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: Stack(
-                  children: [
-                    Container(
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: Color(0xFF0A0E1A),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    FractionallySizedBox(
-                      widthFactor: percentage,
-                      child: Container(
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: Color(0xFFE6B17A),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: 8),
-              Text(
-                '$count',
-                style: TextStyle(color: Color(0xFF8B94A8), fontSize: 12),
-              ),
-            ],
-          ),
-        );
-      }),
-    );
-  }
-
-  Widget _buildSortAndFilter() {
-    return Padding(
-      padding: EdgeInsets.all(20),
       child: Row(
         children: [
           Expanded(
-            child: _buildDropdown(
-              'Sort by',
-              selectedSort,
-              sortOptions,
-                  (value) => setState(() => selectedSort = value!),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Color(0xFF1A1F2E),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Color(0xFF2A3142), width: 1),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.movie_filter, color: Color(0xFF8B94A8), size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    '$totalRatings',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    'Rated',
+                    style: TextStyle(
+                      color: Color(0xFF8B94A8),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          SizedBox(width: 16),
+          SizedBox(width: 12),
           Expanded(
-            child: _buildDropdown(
-              'Filter',
-              selectedFilter,
-              filterOptions,
-                  (value) => setState(() => selectedFilter = value!),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFE6B17A).withOpacity(0.2),
+                    Color(0xFFE6B17A).withOpacity(0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Color(0xFFE6B17A).withOpacity(0.3), width: 1),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.emoji_events, color: Color(0xFFE6B17A), size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    '$perfectScoreCount',
+                    style: TextStyle(
+                      color: Color(0xFFE6B17A),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    'Perfect 10s',
+                    style: TextStyle(
+                      color: Color(0xFFE6B17A).withOpacity(0.8),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -410,28 +342,132 @@ class _RatingsScreenState extends State<RatingsScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildDropdown(String label, String value, List<String> items, Function(String?) onChanged) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Color(0xFF1A1F2E),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Color(0xFF2A3142), width: 1),
+  Widget _buildFilters() {
+    return Padding(
+      padding: EdgeInsets.all(20),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildCustomDropdown(
+              selectedSort,
+              sortOptions,
+                  (value) => setState(() => selectedSort = value),
+              'Sort',
+            ),
+          ),
+          SizedBox(width: 16),
+          Expanded(
+            child: _buildCustomDropdown(
+              selectedFilter,
+              filterOptions,
+                  (value) => setState(() => selectedFilter = value),
+              'Filter',
+            ),
+          ),
+        ],
       ),
-      child: DropdownButton<String>(
-        value: value,
-        isExpanded: true,
-        underline: SizedBox(),
-        dropdownColor: Color(0xFF2A3142),
-        style: TextStyle(color: Colors.white, fontSize: 14),
-        icon: Icon(Icons.arrow_drop_down, color: Color(0xFFE6B17A)),
-        items: items.map((String item) {
-          return DropdownMenuItem<String>(
-            value: item,
-            child: Text(item),
-          );
-        }).toList(),
-        onChanged: onChanged,
+    );
+  }
+
+  Widget _buildCustomDropdown(String value, List<String> items, Function(String) onChanged, String hint) {
+    return GestureDetector(
+      onTap: () {
+        _showCustomDropdown(context, value, items, onChanged);
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Color(0xFF1A1F2E),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Color(0xFF2A3142), width: 1),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hint,
+                  style: TextStyle(
+                    color: Color(0xFF8B94A8),
+                    fontSize: 12,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            Icon(Icons.arrow_drop_down, color: Color(0xFFE6B17A), size: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCustomDropdown(BuildContext context, String currentValue, List<String> items, Function(String) onChanged) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        margin: EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Color(0xFF1A1F2E),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Color(0xFF2A3142), width: 1),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: Color(0xFF2A3142),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            ...items.map((item) {
+              final isSelected = item == currentValue;
+              return GestureDetector(
+                onTap: () {
+                  onChanged(item);
+                  Navigator.pop(context);
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: isSelected ? Color(0xFFE6B17A).withOpacity(0.1) : Colors.transparent,
+                    border: Border(
+                      left: BorderSide(
+                        color: isSelected ? Color(0xFFE6B17A) : Colors.transparent,
+                        width: 3,
+                      ),
+                    ),
+                  ),
+                  child: Text(
+                    item,
+                    style: TextStyle(
+                      color: isSelected ? Color(0xFFE6B17A) : Colors.white,
+                      fontSize: 16,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+            SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }
@@ -682,7 +718,7 @@ class _RatingDetailsSheetState extends State<_RatingDetailsSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.8,
+      height: MediaQuery.of(context).size.height * 0.9,
       decoration: BoxDecoration(
         color: Color(0xFF1A1F2E),
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
@@ -701,7 +737,12 @@ class _RatingDetailsSheetState extends State<_RatingDetailsSheet> {
           ),
           Expanded(
             child: SingleChildScrollView(
-              padding: EdgeInsets.all(20),
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

@@ -105,17 +105,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ],
             ),
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Color(0xFF1A1F2E),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Color(0xFF2A3142), width: 1),
-              ),
-              child: Icon(
-                Icons.search,
-                color: Color(0xFFE6B17A),
-                size: 24,
+            GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(context, '/search');
+              },
+              child: Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Color(0xFF1A1F2E),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Color(0xFF2A3142), width: 1),
+                ),
+                child: Icon(
+                  Icons.search,
+                  color: Color(0xFFE6B17A),
+                  size: 24,
+                ),
               ),
             ),
           ],
@@ -251,46 +256,46 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildActionCard(String title, IconData icon, String subtitle, String destination) {
     return GestureDetector(
         onTap: () {
-      Navigator.pushNamed(context, '/$destination');},
+          Navigator.pushNamed(context, '/$destination');},
         child:
         Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Color(0xFF1A1F2E),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Color(0xFF2A3142), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Color(0xFFE6B17A).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: Color(0xFFE6B17A), size: 24),
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Color(0xFF1A1F2E),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Color(0xFF2A3142), width: 1),
           ),
-          SizedBox(height: 16),
-          Text(
-            title,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Color(0xFFE6B17A).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: Color(0xFFE6B17A), size: 24),
+              ),
+              SizedBox(height: 16),
+              Text(
+                title,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: Color(0xFF8B94A8),
+                  fontSize: 14,
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: TextStyle(
-              color: Color(0xFF8B94A8),
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
-    )
+        )
     );
   }
 

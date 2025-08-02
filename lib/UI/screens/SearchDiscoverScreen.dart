@@ -17,10 +17,10 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Ticker
   String searchQuery = '';
   String selectedCategory = 'All';
 
-  final List<String> categories = ['All', 'Movies', 'TV Shows', 'Action', 'Drama', 'Comedy', 'Sci-Fi', 'Horror'];
+  final List<String> categories = ['All', 'Movies', 'TV Shows', 'Action', 'Drama', 'Comedy', 'Sci-Fi', 'Horror', 'Romance', 'Thriller'];
 
   // Placeholder data for search results and discover sections
-  final List<Map<String, dynamic>> trendingItems = [
+  final List<Map<String, dynamic>> allItems = [
     {
       'title': 'Dune: Part Two',
       'year': '2024',
@@ -28,6 +28,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Ticker
       'rating': 8.9,
       'type': 'Movie',
       'isInWatchlist': false,
+      'category': 'Trending',
     },
     {
       'title': 'Shogun',
@@ -36,6 +37,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Ticker
       'rating': 9.1,
       'type': 'TV Show',
       'isInWatchlist': false,
+      'category': 'Trending',
     },
     {
       'title': 'The Zone of Interest',
@@ -44,10 +46,8 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Ticker
       'rating': 8.2,
       'type': 'Movie',
       'isInWatchlist': false,
+      'category': 'Trending',
     },
-  ];
-
-  final List<Map<String, dynamic>> topRatedItems = [
     {
       'title': 'The Shawshank Redemption',
       'year': '1994',
@@ -55,6 +55,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Ticker
       'rating': 9.3,
       'type': 'Movie',
       'isInWatchlist': false,
+      'category': 'Top Rated',
     },
     {
       'title': 'Breaking Bad',
@@ -63,6 +64,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Ticker
       'rating': 9.5,
       'type': 'TV Show',
       'isInWatchlist': true,
+      'category': 'Top Rated',
     },
     {
       'title': 'The Godfather',
@@ -71,10 +73,8 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Ticker
       'rating': 9.2,
       'type': 'Movie',
       'isInWatchlist': false,
+      'category': 'Top Rated',
     },
-  ];
-
-  final List<Map<String, dynamic>> newReleasesItems = [
     {
       'title': 'Poor Things',
       'year': '2024',
@@ -82,14 +82,16 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Ticker
       'rating': 8.4,
       'type': 'Movie',
       'isInWatchlist': false,
+      'category': 'New Releases',
     },
     {
       'title': 'True Detective: Night Country',
       'year': '2024',
-      'genre': 'Mystery',
+      'genre': 'Thriller',
       'rating': 8.1,
       'type': 'TV Show',
       'isInWatchlist': false,
+      'category': 'New Releases',
     },
     {
       'title': 'Madame Web',
@@ -98,8 +100,36 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Ticker
       'rating': 6.1,
       'type': 'Movie',
       'isInWatchlist': false,
+      'category': 'New Releases',
+    },
+    {
+      'title': 'The Exorcist',
+      'year': '1973',
+      'genre': 'Horror',
+      'rating': 8.1,
+      'type': 'Movie',
+      'isInWatchlist': false,
+      'category': 'Top Rated',
+    },
+    {
+      'title': 'The Notebook',
+      'year': '2004',
+      'genre': 'Romance',
+      'rating': 7.8,
+      'type': 'Movie',
+      'isInWatchlist': false,
+      'category': 'Top Rated',
     },
   ];
+
+  List<Map<String, dynamic>> get trendingItems =>
+      allItems.where((item) => item['category'] == 'Trending').toList();
+
+  List<Map<String, dynamic>> get topRatedItems =>
+      allItems.where((item) => item['category'] == 'Top Rated').toList();
+
+  List<Map<String, dynamic>> get newReleasesItems =>
+      allItems.where((item) => item['category'] == 'New Releases').toList();
 
   List<Map<String, dynamic>> searchResults = [];
 
@@ -125,11 +155,6 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Ticker
     ).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic));
 
     _animationController.forward();
-
-    // Auto-focus search field when screen opens
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _searchFocusNode.requestFocus();
-    });
   }
 
   @override
@@ -153,12 +178,8 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Ticker
       isSearching = true;
       searchQuery = query;
 
-      // Simulate search results (in real app, this would be an API call)
-      searchResults = [
-        ...trendingItems,
-        ...topRatedItems,
-        ...newReleasesItems,
-      ].where((item) {
+      // Filter based on search query and selected category
+      searchResults = allItems.where((item) {
         final matchesQuery = item['title'].toString().toLowerCase().contains(query.toLowerCase());
         final matchesCategory = selectedCategory == 'All' ||
             item['type'] == selectedCategory ||
@@ -166,6 +187,14 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Ticker
         return matchesQuery && matchesCategory;
       }).toList();
     });
+  }
+
+  List<Map<String, dynamic>> _getFilteredItems(List<Map<String, dynamic>> items) {
+    if (selectedCategory == 'All') return items;
+
+    return items.where((item) {
+      return item['type'] == selectedCategory || item['genre'] == selectedCategory;
+    }).toList();
   }
 
   @override
@@ -290,7 +319,8 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Ticker
                 }
               });
             },
-            child: Container(
+            child: AnimatedContainer(
+              duration: Duration(milliseconds: 200),
               margin: EdgeInsets.only(right: 12),
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(
@@ -317,16 +347,26 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Ticker
   }
 
   Widget _buildDiscoverContent() {
+    final filteredTrending = _getFilteredItems(trendingItems);
+    final filteredTopRated = _getFilteredItems(topRatedItems);
+    final filteredNewReleases = _getFilteredItems(newReleasesItems);
+
     return CustomScrollView(
       physics: BouncingScrollPhysics(),
       slivers: [
         SliverToBoxAdapter(child: SizedBox(height: 20)),
-        _buildSection('Trending Now', trendingItems),
-        SliverToBoxAdapter(child: SizedBox(height: 32)),
-        _buildSection('Top Rated', topRatedItems),
-        SliverToBoxAdapter(child: SizedBox(height: 32)),
-        _buildSection('New Releases', newReleasesItems),
-        SliverToBoxAdapter(child: SizedBox(height: 32)),
+        if (filteredTrending.isNotEmpty) ...[
+          _buildSection('Trending Now', filteredTrending),
+          SliverToBoxAdapter(child: SizedBox(height: 32)),
+        ],
+        if (filteredTopRated.isNotEmpty) ...[
+          _buildSection('Top Rated', filteredTopRated),
+          SliverToBoxAdapter(child: SizedBox(height: 32)),
+        ],
+        if (filteredNewReleases.isNotEmpty) ...[
+          _buildSection('New Releases', filteredNewReleases),
+          SliverToBoxAdapter(child: SizedBox(height: 32)),
+        ],
         _buildGenresSection(),
         SliverToBoxAdapter(child: SizedBox(height: 100)),
       ],
@@ -483,12 +523,15 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Ticker
 
   Widget _buildGenresSection() {
     final genres = [
-      {'name': 'Action', 'icon': Icons.local_fire_department, 'color': Color(0xFFFF6B6B)},
-      {'name': 'Comedy', 'icon': Icons.sentiment_very_satisfied, 'color': Color(0xFF4ECDC4)},
+      {'name': 'Action', 'icon': Icons.sports_martial_arts, 'color': Color(0xFFFF6B6B)},
+      {'name': 'Comedy', 'icon': Icons.mood, 'color': Color(0xFF4ECDC4)},
       {'name': 'Drama', 'icon': Icons.theater_comedy, 'color': Color(0xFF95E1D3)},
-      {'name': 'Horror', 'icon': Icons.warning_amber, 'color': Color(0xFFFF6B9D)},
+      {'name': 'Horror', 'icon': Icons.nightlight_round, 'color': Color(0xFF8B5CF6)},
       {'name': 'Sci-Fi', 'icon': Icons.rocket_launch, 'color': Color(0xFF7B68EE)},
       {'name': 'Romance', 'icon': Icons.favorite, 'color': Color(0xFFFF6B9D)},
+      {'name': 'Thriller', 'icon': Icons.psychology, 'color': Color(0xFFF59E0B)},
+      {'name': 'Crime', 'icon': Icons.gavel, 'color': Color(0xFFEF4444)},
+      {'name': 'Documentary', 'icon': Icons.movie_filter, 'color': Color(0xFF10B981)},
     ];
 
     return SliverToBoxAdapter(
@@ -521,26 +564,43 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Ticker
               itemCount: genres.length,
               itemBuilder: (context, index) {
                 final genre = genres[index];
+                final isSelected = selectedCategory == genre['name'];
+
                 return GestureDetector(
                   onTap: () {
                     setState(() {
                       selectedCategory = genre['name'] as String;
                     });
+
+                    // Scroll to top to show filtered results
+                    if (context.findRenderObject() != null) {
+                      Scrollable.of(context).position.animateTo(
+                        0,
+                        duration: Duration(milliseconds: 500),
+                        curve: Curves.easeOutCubic,
+                      );
+                    }
                   },
-                  child: Container(
+                  child: AnimatedContainer(
+                    duration: Duration(milliseconds: 200),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [
+                        colors: isSelected ? [
+                          (genre['color'] as Color).withOpacity(0.3),
+                          (genre['color'] as Color).withOpacity(0.2),
+                        ] : [
                           (genre['color'] as Color).withOpacity(0.2),
                           (genre['color'] as Color).withOpacity(0.1),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: (genre['color'] as Color).withOpacity(0.3),
-                        width: 1,
+                        color: isSelected
+                            ? (genre['color'] as Color).withOpacity(0.6)
+                            : (genre['color'] as Color).withOpacity(0.3),
+                        width: isSelected ? 2 : 1,
                       ),
                     ),
                     child: Column(
@@ -549,7 +609,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Ticker
                         Icon(
                           genre['icon'] as IconData,
                           color: genre['color'] as Color,
-                          size: 28,
+                          size: isSelected ? 32 : 28,
                         ),
                         SizedBox(height: 8),
                         Text(
@@ -557,7 +617,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Ticker
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                           ),
                         ),
                       ],

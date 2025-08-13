@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cine_nest/UI/screens/HomeScreen.dart';
 import 'package:cine_nest/UI/screens/WatchList.dart';
 import 'package:cine_nest/UI/screens/RatingsScreen.dart';
+import 'package:cine_nest/UI/screens/SearchDiscoverScreen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -25,6 +26,8 @@ class MyApp extends StatelessWidget {
             return _createRoute(WatchlistScreen(), settings);
           case '/ratings':
             return _createRoute(RatingsScreen(), settings);
+          case '/search':
+            return _createRoute(SearchDiscoverScreen(), settings);
           default:
             return _createRoute(HomeScreen(), settings);
         }

@@ -234,6 +234,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _performSearch(_searchTextController.text);
   }
 
+  void _showMovieDetails({
+    required String title,
+    required String year,
+    required String genre,
+    required String duration,
+    required double rating,
+    required String synopsis,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _MovieDetailsSheet(
+        title: title,
+        year: year,
+        genre: genre,
+        duration: duration,
+        rating: rating,
+        synopsis: synopsis,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1054,7 +1077,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               physics: const BouncingScrollPhysics(),
               itemCount: 5,
               itemBuilder: (context, index) {
-                return _buildMovieCard(index, isSmall: true, showRating: true);
+                return _buildMovieCard(index, isSmall: true);
               },
             ),
           ),
@@ -1109,74 +1132,304 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildMovieCard(int index, {bool isSmall = false, bool showRating = false}) {
+  Widget _buildMovieCard(int index, {bool isSmall = false}) {
     final titles = ['Interstellar', 'Inception', 'The Dark Knight', 'Pulp Fiction', 'Fight Club'];
     final ratings = [9.2, 9.0, 8.8, 8.9, 8.7];
+    final years = ['2014', '2010', '2008', '1994', '1999'];
+    final genres = ['Sci-Fi', 'Sci-Fi', 'Action', 'Crime', 'Drama'];
+    final durations = ['169 min', '148 min', '152 min', '154 min', '139 min'];
+    final synopses = [
+      'A team of explorers travel through a wormhole in space in an attempt to ensure humanity\'s survival.',
+      'A thief who steals corporate secrets through dream-sharing technology is given the inverse task of planting an idea.',
+      'When the menace known as the Joker wreaks havoc and chaos on the people of Gotham, Batman must accept one of the greatest psychological and physical tests.',
+      'The lives of two mob hitmen, a boxer, a gangster and his wife intertwine in four tales of violence and redemption.',
+      'An insomniac office worker and a devil-may-care soap maker form an underground fight club that evolves into much more.'
+    ];
 
-    return Container(
-      width: isSmall ? 120 : 160,
-      margin: EdgeInsets.only(right: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Color(0xFF2A3142),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Color(0xFF3A4155), width: 1),
-              ),
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      width: double.infinity,
-                      height: double.infinity,
-                      color: Color(0xFF2A3142),
-                    ),
+    return GestureDetector(
+      onLongPress: () {
+        _showMovieDetails(
+          title: titles[index],
+          year: years[index],
+          genre: genres[index],
+          duration: durations[index],
+          rating: ratings[index],
+          synopsis: synopses[index],
+        );
+      },
+      child: Container(
+        width: isSmall ? 120 : 160,
+        margin: EdgeInsets.only(right: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Color(0xFF2A3142),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Color(0xFF3A4155), width: 1),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    width: double.infinity,
+                    height: double.infinity,
+                    color: Color(0xFF2A3142),
                   ),
-                  if (showRating)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                ),
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              titles[index],
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            SizedBox(height: 2),
+            Text(
+              '${years[index]} • ${genres[index]}',
+              style: TextStyle(
+                color: Color(0xFF8B94A8),
+                fontSize: 12,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MovieDetailsSheet extends StatelessWidget {
+  final String title;
+  final String year;
+  final String genre;
+  final String duration;
+  final double rating;
+  final String synopsis;
+
+  const _MovieDetailsSheet({
+    required this.title,
+    required this.year,
+    required this.genre,
+    required this.duration,
+    required this.rating,
+    required this.synopsis,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.75,
+      decoration: BoxDecoration(
+        color: Color(0xFF1A1F2E),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        border: Border.all(color: Color(0xFF2A3142), width: 1),
+      ),
+      child: Column(
+        children: [
+          // Handle bar
+          Container(
+            width: 40,
+            height: 4,
+            margin: EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: Color(0xFF2A3142),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Movie poster and basic info
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Movie poster
+                      Container(
+                        width: 120,
+                        height: 180,
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.7),
-                          borderRadius: BorderRadius.circular(8),
+                          color: Color(0xFF2A3142),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Color(0xFF3A4155), width: 1),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                      ),
+                      SizedBox(width: 20),
+
+                      // Movie details
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.star, color: Color(0xFFE6B17A), size: 12),
-                            SizedBox(width: 2),
                             Text(
-                              '${ratings[index]}',
+                              title,
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              '$year • $genre',
+                              style: TextStyle(
+                                color: Color(0xFF8B94A8),
+                                fontSize: 16,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              duration,
+                              style: TextStyle(
+                                color: Color(0xFF8B94A8),
+                                fontSize: 14,
+                              ),
+                            ),
+                            SizedBox(height: 16),
+
+                            // Rating
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Color(0xFFE6B17A).withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Color(0xFFE6B17A), width: 1),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.star, color: Color(0xFFE6B17A), size: 18),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    rating.toString(),
+                                    style: TextStyle(
+                                      color: Color(0xFFE6B17A),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    '/10',
+                                    style: TextStyle(
+                                      color: Color(0xFFE6B17A).withOpacity(0.8),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
+                    ],
+                  ),
+
+                  SizedBox(height: 24),
+
+                  // Synopsis
+                  Text(
+                    'Synopsis',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
                     ),
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    synopsis,
+                    style: TextStyle(
+                      color: Color(0xFF8B94A8),
+                      fontSize: 16,
+                      height: 1.5,
+                    ),
+                  ),
+
+                  SizedBox(height: 32),
+
+                  // Action buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Added to watchlist'),
+                                backgroundColor: Color(0xFF2A3142),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            decoration: BoxDecoration(
+                              color: Color(0xFFE6B17A),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.bookmark_add, color: Color(0xFF0A0E1A), size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Add to Watchlist',
+                                  style: TextStyle(
+                                    color: Color(0xFF0A0E1A),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 16),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pop(context);
+                          // Navigate to full movie page
+                        },
+                        child: Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Color(0xFF2A3142),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Color(0xFF3A4155), width: 1),
+                          ),
+                          child: Icon(
+                            Icons.info_outline,
+                            color: Color(0xFFE6B17A),
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: 20),
                 ],
               ),
             ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            titles[index],
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

@@ -1,11 +1,36 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart'; // Add this dependency
 
 import 'package:cine_nest/UI/screens/HomeScreen.dart';
 import 'package:cine_nest/UI/screens/WatchList.dart';
 import 'package:cine_nest/UI/screens/RatingsScreen.dart';
 import 'package:cine_nest/UI/screens/SearchDiscoverScreen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Configure window size limits (Desktop only)
+  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+    await windowManager.ensureInitialized();
+
+    WindowOptions windowOptions = WindowOptions(
+      size: Size(1200, 800),        // Default size
+      minimumSize: Size(800, 600),  // Minimum window size
+      maximumSize: Size(2560, 1440), // Maximum window size
+      center: true,
+      backgroundColor: Colors.transparent,
+      skipTaskbar: false,
+      titleBarStyle: TitleBarStyle.normal,
+    );
+
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
+
   runApp(const MyApp());
 }
 
@@ -56,31 +81,4 @@ class MyApp extends StatelessWidget {
       },
     );
   }
-}
-
-// Alternative: If you prefer slide transitions, use this instead
-class SlideRoute extends PageRouteBuilder {
-  final Widget page;
-
-  SlideRoute({required this.page, RouteSettings? settings})
-      : super(
-    settings: settings,
-    pageBuilder: (context, animation, secondaryAnimation) => page,
-    transitionDuration: Duration(milliseconds: 300),
-    reverseTransitionDuration: Duration(milliseconds: 250),
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      const begin = Offset(1.0, 0.0);
-      const end = Offset.zero;
-      const curve = Curves.easeOutCubic;
-
-      var tween = Tween(begin: begin, end: end).chain(
-        CurveTween(curve: curve),
-      );
-
-      return SlideTransition(
-        position: animation.drive(tween),
-        child: child,
-      );
-    },
-  );
 }

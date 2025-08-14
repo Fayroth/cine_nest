@@ -139,12 +139,67 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
     return _cachedFilteredItems!;
   }
 
-  // New method to show item details (similar to HomeScreen)
+  // Helper method to get responsive grid columns with better breakpoints
+  int _getGridColumns(double screenWidth) {
+    if (screenWidth < 400) return 2;        // Small phones
+    if (screenWidth < 550) return 3;        // Large phones
+    if (screenWidth < 750) return 4;        // Small tablets
+    if (screenWidth < 950) return 5;        // Large tablets
+    if (screenWidth < 1150) return 6;       // Small desktops
+    if (screenWidth < 1400) return 7;       // Medium desktops
+    if (screenWidth < 1700) return 8;       // Large desktops
+    return 9;                               // Ultra-wide monitors
+  }
+
+  // Helper method to get maximum card width with better scaling
+  double? _getMaxCardWidth(double screenWidth) {
+    if (screenWidth > 1600) return 190;     // Ultra-wide screens
+    if (screenWidth > 1200) return 170;     // Large screens
+    if (screenWidth > 900) return 160;      // Medium screens
+    return null;                            // No constraint for smaller screens
+  }
+
+  // Helper method to get responsive font sizes
+  Map<String, double> _getResponsiveFontSizes(double screenWidth) {
+    if (screenWidth < 400) {
+      return {
+        'title': 12.0,
+        'subtitle': 9.0,
+        'rating': 9.0,
+        'duration': 8.0,
+      };
+    } else if (screenWidth < 600) {
+      return {
+        'title': 13.0,
+        'subtitle': 10.0,
+        'rating': 10.0,
+        'duration': 8.5,
+      };
+    } else if (screenWidth < 900) {
+      return {
+        'title': 14.0,
+        'subtitle': 11.0,
+        'rating': 11.0,
+        'duration': 9.0,
+      };
+    } else {
+      return {
+        'title': 15.0,
+        'subtitle': 12.0,
+        'rating': 12.0,
+        'duration': 10.0,
+      };
+    }
+  }
+
+  // New method to show item details - simple modal approach
   void _showItemDetails(Map<String, dynamic> item) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      useSafeArea: false,
+      enableDrag: true,
       builder: (context) => _ItemDetailsSheet(item: item),
     );
   }
@@ -249,46 +304,72 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        padding: EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFE6B17A).withOpacity(0.1),
-              Color(0xFFE6B17A).withOpacity(0.05),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Color(0xFFE6B17A).withOpacity(0.3), width: 1),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: _buildStatItem('${watchlistItems.length}', 'Total Items', Icons.bookmark),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Calculate optimal width for stats bar
+          double statsWidth;
+
+          if (constraints.maxWidth < 400) {
+            // Small phones: Use most of available width
+            statsWidth = constraints.maxWidth * 0.95;
+          } else if (constraints.maxWidth < 800) {
+            // Medium screens: Fixed reasonable width
+            statsWidth = 360;
+          } else if (constraints.maxWidth < 1200) {
+            // Tablets/small desktops: Slightly larger
+            statsWidth = 420;
+          } else {
+            // Large screens: Max width with good proportions
+            statsWidth = 480;
+          }
+
+          return Center(
+            child: Container(
+              width: statsWidth,
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFE6B17A).withOpacity(0.1),
+                    Color(0xFFE6B17A).withOpacity(0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Color(0xFFE6B17A).withOpacity(0.3), width: 1),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildStatItem('${watchlistItems.length}', 'Total Items', Icons.bookmark),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 40,
+                    color: Color(0xFF2A3142),
+                  ),
+                  Expanded(
+                    child: _buildStatItem('${totalHours.toInt()}h', 'Watch Time', Icons.access_time),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 40,
+                    color: Color(0xFF2A3142),
+                  ),
+                  Expanded(
+                    child: _buildStatItem('$movieCount', 'Movies', Icons.movie),
+                  ),
+                ],
+              ),
             ),
-            Container(
-              width: 1,
-              height: 40,
-              color: Color(0xFF2A3142),
-            ),
-            Expanded(
-              child: _buildStatItem('${totalHours.toInt()}h', 'Watch Time', Icons.access_time),
-            ),
-            Container(
-              width: 1,
-              height: 40,
-              color: Color(0xFF2A3142),
-            ),
-            Expanded(
-              child: _buildStatItem('$movieCount', 'Movies', Icons.movie),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
+
+
 
   Widget _buildStatItem(String value, String label, IconData icon) {
     return Column(
@@ -361,24 +442,61 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
       return _buildEmptyState();
     }
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20),
-      child: isGridView ? _buildGridView() : _buildListView(),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (isGridView) {
+          // Centered content on wide screens
+          final screenWidth = constraints.maxWidth;
+          final maxWidth = screenWidth > 1400 ? 1400.0 : screenWidth;
+
+          return Center(
+            child: Container(
+              width: maxWidth,
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: _buildGridView(screenWidth),
+            ),
+          );
+        } else {
+          // Centered list view on wide screens
+          final maxWidth = constraints.maxWidth > 800 ? 800.0 : constraints.maxWidth;
+
+          return Center(
+            child: Container(
+              width: maxWidth,
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: _buildListView(),
+            ),
+          );
+        }
+      },
     );
   }
 
-  Widget _buildGridView() {
+  Widget _buildGridView(double screenWidth) {
+    final columns = _getGridColumns(screenWidth);
+    final maxCardWidth = _getMaxCardWidth(screenWidth);
+
     return GridView.builder(
       physics: BouncingScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 20,
+        crossAxisCount: columns,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 16,
         childAspectRatio: 0.7,
       ),
       itemCount: filteredItems.length,
       itemBuilder: (context, index) {
-        return _buildGridItem(filteredItems[index], index);
+        Widget card = _buildGridItem(filteredItems[index], index, screenWidth);
+
+        // Apply max width constraint if needed
+        if (maxCardWidth != null) {
+          card = ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxCardWidth),
+            child: card,
+          );
+        }
+
+        return card;
       },
     );
   }
@@ -393,10 +511,12 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
     );
   }
 
-  // Updated with longPress gesture
-  Widget _buildGridItem(Map<String, dynamic> item, int index) {
+  // Updated with better responsive design and overflow fixes
+  Widget _buildGridItem(Map<String, dynamic> item, int index, double screenWidth) {
+    final fontSizes = _getResponsiveFontSizes(screenWidth);
+
     return GestureDetector(
-      onLongPress: () => _showItemDetails(item), // Added longPress
+      onLongPress: () => _showItemDetails(item),
       child: Container(
         decoration: BoxDecoration(
           color: Color(0xFF1A1F2E),
@@ -416,35 +536,42 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
                 ),
                 child: Stack(
                   children: [
-                    // Long press hint (subtle)
-                    Positioned(
-                      bottom: 8,
-                      left: 8,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.6),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.touch_app, color: Colors.white.withOpacity(0.7), size: 12),
-                            SizedBox(width: 4),
-                            Text(
-                              'Hold for details',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.7),
-                                fontSize: 10,
+                    // Long press hint (only show on smaller screens)
+                    if (screenWidth < 900)
+                      Positioned(
+                        bottom: 6,
+                        left: 6,
+                        right: 6,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.touch_app, color: Colors.white.withOpacity(0.7), size: 8),
+                              SizedBox(width: 2),
+                              Flexible(
+                                child: Text(
+                                  'Hold for details',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.7),
+                                    fontSize: 7,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
                     Positioned(
-                      top: 12,
-                      right: 12,
+                      top: 6,
+                      right: 6,
                       child: _buildActionMenu(item),
                     ),
                   ],
@@ -454,47 +581,68 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
             Expanded(
               flex: 2,
               child: Padding(
-                padding: EdgeInsets.all(16),
+                padding: EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      item['title'],
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                    // Title with proper overflow handling
+                    Flexible(
+                      child: Text(
+                        item['title'],
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: fontSizes['title']!,
+                          fontWeight: FontWeight.w600,
+                          height: 1.2,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: 4),
+                    SizedBox(height: 2),
+                    // Subtitle with overflow protection
                     Text(
                       '${item['year']} • ${item['genre']}',
                       style: TextStyle(
                         color: Color(0xFF8B94A8),
-                        fontSize: 12,
+                        fontSize: fontSizes['subtitle']!,
+                        height: 1.1,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Spacer(),
+                    // Bottom row with rating and duration
                     Row(
                       children: [
-                        Icon(Icons.star, color: Color(0xFFE6B17A), size: 14),
+                        Icon(Icons.star, color: Color(0xFFE6B17A), size: fontSizes['rating']! + 1),
                         SizedBox(width: 2),
-                        Text(
-                          '${item['rating']}',
-                          style: TextStyle(
-                            color: Color(0xFFE6B17A),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                        Flexible(
+                          flex: 2,
+                          child: Text(
+                            '${item['rating']}',
+                            style: TextStyle(
+                              color: Color(0xFFE6B17A),
+                              fontSize: fontSizes['rating']!,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        Spacer(),
-                        Text(
-                          item['duration'],
-                          style: TextStyle(
-                            color: Color(0xFF8B94A8),
-                            fontSize: 10,
+                        SizedBox(width: 4),
+                        Flexible(
+                          flex: 3,
+                          child: Text(
+                            item['duration'],
+                            style: TextStyle(
+                              color: Color(0xFF8B94A8),
+                              fontSize: fontSizes['duration']!,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
                           ),
                         ),
                       ],
@@ -619,12 +767,12 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
   Widget _buildActionMenu(Map<String, dynamic> item) {
     return PopupMenuButton<String>(
       icon: Container(
-        padding: EdgeInsets.all(8),
+        padding: EdgeInsets.all(4),
         decoration: BoxDecoration(
           color: Colors.black.withOpacity(0.5),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(6),
         ),
-        child: Icon(Icons.more_vert, color: Colors.white, size: 16),
+        child: Icon(Icons.more_vert, color: Colors.white, size: 12),
       ),
       color: Color(0xFF2A3142),
       elevation: 8,
@@ -634,9 +782,15 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
           value: 'watched',
           child: Row(
             children: [
-              Icon(Icons.check_circle_outline, color: Color(0xFFE6B17A), size: 20),
-              SizedBox(width: 12),
-              Text('Mark as Watched', style: TextStyle(color: Colors.white)),
+              Icon(Icons.check_circle_outline, color: Color(0xFFE6B17A), size: 18),
+              SizedBox(width: 10),
+              Flexible(
+                child: Text(
+                  'Mark as Watched',
+                  style: TextStyle(color: Colors.white, fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
         ),
@@ -644,9 +798,15 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
           value: 'remove',
           child: Row(
             children: [
-              Icon(Icons.delete_outline, color: Colors.red, size: 20),
-              SizedBox(width: 12),
-              Text('Remove from Watchlist', style: TextStyle(color: Colors.white)),
+              Icon(Icons.delete_outline, color: Colors.red, size: 18),
+              SizedBox(width: 10),
+              Flexible(
+                child: Text(
+                  'Remove from Watchlist',
+                  style: TextStyle(color: Colors.white, fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
         ),
@@ -654,9 +814,15 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
           value: 'share',
           child: Row(
             children: [
-              Icon(Icons.share_outlined, color: Color(0xFF8B94A8), size: 20),
-              SizedBox(width: 12),
-              Text('Share', style: TextStyle(color: Colors.white)),
+              Icon(Icons.share_outlined, color: Color(0xFF8B94A8), size: 18),
+              SizedBox(width: 10),
+              Flexible(
+                child: Text(
+                  'Share',
+                  style: TextStyle(color: Colors.white, fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
         ),
@@ -811,7 +977,7 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
   }
 }
 
-// New widget for item details (similar to HomeScreen's movie details)
+// New widget for item details with responsive design
 class _ItemDetailsSheet extends StatelessWidget {
   final Map<String, dynamic> item;
 
@@ -819,113 +985,126 @@ class _ItemDetailsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
-      decoration: BoxDecoration(
-        color: Color(0xFF1A1F2E),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-        border: Border.all(color: Color(0xFF2A3142), width: 1),
-      ),
-      child: Column(
-        children: [
-          // Handle bar
-          Container(
-            width: 40,
-            height: 4,
-            margin: EdgeInsets.symmetric(vertical: 12),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Responsive bottom sheet
+        final screenWidth = constraints.maxWidth;
+        final maxWidth = screenWidth > 600 ? 600.0 : screenWidth;
+        final shouldCenter = screenWidth > 600;
+
+        return Center(
+          child: Container(
+            width: maxWidth,
+            height: MediaQuery.of(context).size.height * 0.75,
+            margin: shouldCenter ? EdgeInsets.symmetric(horizontal: 20) : EdgeInsets.zero,
             decoration: BoxDecoration(
-              color: Color(0xFF2A3142),
-              borderRadius: BorderRadius.circular(2),
+              color: Color(0xFF1A1F2E),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(30), bottom: Radius.circular(30)),
+              border: Border.all(color: Color(0xFF2A3142), width: 1),
             ),
-          ),
+            child: Column(
+              children: [
+                // Handle bar
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Color(0xFF2A3142),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
 
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Movie/Show poster and basic info
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Poster
-                      Container(
-                        width: 120,
-                        height: 180,
-                        decoration: BoxDecoration(
-                          color: Color(0xFF2A3142),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Color(0xFF3A4155), width: 1),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            item['type'] == 'Movie' ? Icons.movie : Icons.tv,
-                            color: Color(0xFF8B94A8),
-                            size: 40,
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 20),
-
-                      // Details
-                      Expanded(
-                        child: Column(
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Movie/Show poster and basic info
+                        Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              item['title'],
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              '${item['year']} • ${item['genre']}',
-                              style: TextStyle(
-                                color: Color(0xFF8B94A8),
-                                fontSize: 16,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              item['duration'],
-                              style: TextStyle(
-                                color: Color(0xFF8B94A8),
-                                fontSize: 14,
-                              ),
-                            ),
-                            SizedBox(height: 16),
-
-                            // Rating
+                            // Poster
                             Container(
-                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              width: 120,
+                              height: 180,
                               decoration: BoxDecoration(
-                                color: Color(0xFFE6B17A).withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Color(0xFFE6B17A), width: 1),
+                                color: Color(0xFF2A3142),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Color(0xFF3A4155), width: 1),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
+                              child: Center(
+                                child: Icon(
+                                  item['type'] == 'Movie' ? Icons.movie : Icons.tv,
+                                  color: Color(0xFF8B94A8),
+                                  size: 40,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 20),
+
+                            // Details
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Icon(Icons.star, color: Color(0xFFE6B17A), size: 18),
-                                  SizedBox(width: 6),
                                   Text(
-                                    item['rating'].toString(),
+                                    item['title'],
                                     style: TextStyle(
-                                      color: Color(0xFFE6B17A),
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                  SizedBox(width: 4),
+                                  SizedBox(height: 8),
                                   Text(
-                                    '/10',
+                                    '${item['year']} • ${item['genre']}',
                                     style: TextStyle(
-                                      color: Color(0xFFE6B17A).withOpacity(0.8),
+                                      color: Color(0xFF8B94A8),
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    item['duration'],
+                                    style: TextStyle(
+                                      color: Color(0xFF8B94A8),
                                       fontSize: 14,
+                                    ),
+                                  ),
+                                  SizedBox(height: 16),
+
+                                  // Rating
+                                  Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Color(0xFFE6B17A).withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: Color(0xFFE6B17A), width: 1),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.star, color: Color(0xFFE6B17A), size: 18),
+                                        SizedBox(width: 6),
+                                        Text(
+                                          item['rating'].toString(),
+                                          style: TextStyle(
+                                            color: Color(0xFFE6B17A),
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          '/10',
+                                          style: TextStyle(
+                                            color: Color(0xFFE6B17A).withOpacity(0.8),
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
@@ -933,96 +1112,165 @@ class _ItemDetailsSheet extends StatelessWidget {
                             ),
                           ],
                         ),
-                      ),
-                    ],
-                  ),
 
-                  SizedBox(height: 24),
+                        SizedBox(height: 24),
 
-                  // Added to watchlist info
-                  Container(
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Color(0xFF0A0E1A),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Color(0xFF2A3142), width: 1),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.bookmark,
-                          color: Color(0xFFE6B17A),
-                          size: 20,
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        // Added to watchlist info
+                        Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Color(0xFF0A0E1A),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Color(0xFF2A3142), width: 1),
+                          ),
+                          child: Row(
                             children: [
-                              Text(
-                                'In your watchlist',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              Icon(
+                                Icons.bookmark,
+                                color: Color(0xFFE6B17A),
+                                size: 20,
                               ),
-                              SizedBox(height: 2),
-                              Text(
-                                'Added ${item['dateAdded']}',
-                                style: TextStyle(
-                                  color: Color(0xFF8B94A8),
-                                  fontSize: 12,
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'In your watchlist',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    SizedBox(height: 2),
+                                    Text(
+                                      'Added ${item['dateAdded']}',
+                                      style: TextStyle(
+                                        color: Color(0xFF8B94A8),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
 
-                  SizedBox(height: 24),
+                        SizedBox(height: 24),
 
-                  // Synopsis
-                  Text(
-                    'Synopsis',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  Text(
-                    item['synopsis'] ?? 'No synopsis available.',
-                    style: TextStyle(
-                      color: Color(0xFF8B94A8),
-                      fontSize: 16,
-                      height: 1.5,
-                    ),
-                  ),
+                        // Synopsis
+                        Text(
+                          'Synopsis',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          item['synopsis'] ?? 'No synopsis available.',
+                          style: TextStyle(
+                            color: Color(0xFF8B94A8),
+                            fontSize: 16,
+                            height: 1.5,
+                          ),
+                        ),
 
-                  SizedBox(height: 32),
+                        SizedBox(height: 32),
 
-                  // Action buttons
-                  Column(
-                    children: [
-                      // Primary actions
-                      Row(
-                        children: [
-                          Expanded(
-                            child: GestureDetector(
+                        // Action buttons
+                        Column(
+                          children: [
+                            // Primary actions
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      // Mark as watched logic
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Marked as watched'),
+                                          backgroundColor: Color(0xFF2A3142),
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(vertical: 16),
+                                      decoration: BoxDecoration(
+                                        color: Color(0xFFE6B17A),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.check_circle, color: Color(0xFF0A0E1A), size: 20),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'Mark as Watched',
+                                            style: TextStyle(
+                                              color: Color(0xFF0A0E1A),
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 16),
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    // Share functionality
+                                  },
+                                  child: Container(
+                                    padding: EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Color(0xFF2A3142),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: Color(0xFF3A4155), width: 1),
+                                    ),
+                                    child: Icon(
+                                      Icons.share_outlined,
+                                      color: Color(0xFFE6B17A),
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            SizedBox(height: 16),
+
+                            // Secondary action - Remove from watchlist
+                            GestureDetector(
                               onTap: () {
                                 Navigator.pop(context);
-                                // Mark as watched logic
+                                // Remove from watchlist logic would go here
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('Marked as watched'),
+                                    content: Text('Removed from watchlist'),
                                     backgroundColor: Color(0xFF2A3142),
                                     behavior: SnackBarBehavior.floating,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    action: SnackBarAction(
+                                      label: 'Undo',
+                                      textColor: Color(0xFFE6B17A),
+                                      onPressed: () {
+                                        // Undo logic
+                                      },
                                     ),
                                   ),
                                 );
@@ -1030,18 +1278,19 @@ class _ItemDetailsSheet extends StatelessWidget {
                               child: Container(
                                 padding: EdgeInsets.symmetric(vertical: 16),
                                 decoration: BoxDecoration(
-                                  color: Color(0xFFE6B17A),
+                                  color: Color(0xFF2A3142),
                                   borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Color(0xFF3A4155), width: 1),
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.check_circle, color: Color(0xFF0A0E1A), size: 20),
+                                    Icon(Icons.delete_outline, color: Colors.red, size: 20),
                                     SizedBox(width: 8),
                                     Text(
-                                      'Mark as Watched',
+                                      'Remove from Watchlist',
                                       style: TextStyle(
-                                        color: Color(0xFF0A0E1A),
+                                        color: Colors.red,
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -1050,89 +1299,19 @@ class _ItemDetailsSheet extends StatelessWidget {
                                 ),
                               ),
                             ),
-                          ),
-                          SizedBox(width: 16),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.pop(context);
-                              // Share functionality
-                            },
-                            child: Container(
-                              padding: EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Color(0xFF2A3142),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Color(0xFF3A4155), width: 1),
-                              ),
-                              child: Icon(
-                                Icons.share_outlined,
-                                color: Color(0xFFE6B17A),
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      SizedBox(height: 16),
-
-                      // Secondary action - Remove from watchlist
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pop(context);
-                          // Remove from watchlist logic would go here
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Removed from watchlist'),
-                              backgroundColor: Color(0xFF2A3142),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              action: SnackBarAction(
-                                label: 'Undo',
-                                textColor: Color(0xFFE6B17A),
-                                onPressed: () {
-                                  // Undo logic
-                                },
-                              ),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(
-                            color: Color(0xFF2A3142),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Color(0xFF3A4155), width: 1),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                'Remove from Watchlist',
-                                style: TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
 
-                  SizedBox(height: 20),
-                ],
-              ),
+                        SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

@@ -246,6 +246,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      useSafeArea: false,
+      enableDrag: true,
       builder: (context) => _MovieDetailsSheet(
         title: title,
         year: year,
@@ -1229,6 +1231,7 @@ class _MovieDetailsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.75,
+      width: double.infinity,
       decoration: BoxDecoration(
         color: Color(0xFF1A1F2E),
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),

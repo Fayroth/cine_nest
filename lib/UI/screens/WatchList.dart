@@ -141,14 +141,13 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
 
   // Helper method to get responsive grid columns with better breakpoints
   int _getGridColumns(double screenWidth) {
-    if (screenWidth < 400) return 2;        // Small phones
-    if (screenWidth < 550) return 3;        // Large phones
-    if (screenWidth < 750) return 4;        // Small tablets
-    if (screenWidth < 950) return 5;        // Large tablets
-    if (screenWidth < 1150) return 6;       // Small desktops
-    if (screenWidth < 1400) return 7;       // Medium desktops
-    if (screenWidth < 1700) return 8;       // Large desktops
-    return 9;                               // Ultra-wide monitors
+    if (screenWidth < 500) return 2;        // Phones: 2 columns (was 2-3)
+    if (screenWidth < 750) return 3;        // Large phones/small tablets: 3 columns
+    if (screenWidth < 950) return 4;        // Tablets: 4 columns
+    if (screenWidth < 1150) return 5;       // Large tablets: 5 columns
+    if (screenWidth < 1400) return 6;       // Small desktops: 6 columns
+    if (screenWidth < 1700) return 7;       // Medium desktops: 7 columns
+    return 8;                               // Large desktops: 8 columns
   }
 
   // Helper method to get maximum card width with better scaling
@@ -161,33 +160,34 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
 
   // Helper method to get responsive font sizes
   Map<String, double> _getResponsiveFontSizes(double screenWidth) {
-    if (screenWidth < 400) {
+    if (screenWidth < 500) {
+      // Phones: Larger, more readable fonts
       return {
-        'title': 12.0,
-        'subtitle': 9.0,
-        'rating': 9.0,
-        'duration': 8.0,
+        'title': 15.0,
+        'subtitle': 12.0,
+        'rating': 11.0,
+        'duration': 10.0,
       };
-    } else if (screenWidth < 600) {
+    } else if (screenWidth < 750) {
+      return {
+        'title': 14.0,
+        'subtitle': 11.0,
+        'rating': 10.0,
+        'duration': 9.0,
+      };
+    } else if (screenWidth < 900) {
       return {
         'title': 13.0,
         'subtitle': 10.0,
         'rating': 10.0,
         'duration': 8.5,
       };
-    } else if (screenWidth < 900) {
-      return {
-        'title': 14.0,
-        'subtitle': 11.0,
-        'rating': 11.0,
-        'duration': 9.0,
-      };
     } else {
       return {
-        'title': 15.0,
-        'subtitle': 12.0,
-        'rating': 12.0,
-        'duration': 10.0,
+        'title': 12.0,
+        'subtitle': 9.0,
+        'rating': 9.0,
+        'duration': 8.0,
       };
     }
   }
@@ -482,7 +482,7 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
         crossAxisCount: columns,
         crossAxisSpacing: 12,
         mainAxisSpacing: 16,
-        childAspectRatio: 0.7,
+        childAspectRatio: screenWidth < 500 ? 0.75 : 0.7, // Taller cards on phones
       ),
       itemCount: filteredItems.length,
       itemBuilder: (context, index) {
@@ -514,6 +514,7 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
   // Updated with better responsive design and overflow fixes
   Widget _buildGridItem(Map<String, dynamic> item, int index, double screenWidth) {
     final fontSizes = _getResponsiveFontSizes(screenWidth);
+    final isPhone = screenWidth < 500;
 
     return GestureDetector(
       onLongPress: () => _showItemDetails(item),
@@ -526,8 +527,9 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Poster area with better proportions
             Expanded(
-              flex: 3,
+              flex: isPhone ? 3 : 3, // Keep same ratio but better internal spacing
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -536,30 +538,29 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
                 ),
               ),
             ),
+            // Info area with much better space management
             Expanded(
-              flex: 2,
+              flex: isPhone ? 2 : 2, // Adequate space for text
               child: Padding(
-                padding: EdgeInsets.all(10),
+                padding: EdgeInsets.all(isPhone ? 12 : 8), // More padding on phones
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Title with proper overflow handling
-                    Flexible(
-                      child: Text(
-                        item['title'],
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: fontSizes['title']!,
-                          fontWeight: FontWeight.w600,
-                          height: 1.2,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                    // Title with proper spacing
+                    Text(
+                      item['title'],
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: fontSizes['title']!,
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
                       ),
+                      maxLines: 1, // Allow 2 lines on phones
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: 2),
-                    // Subtitle with overflow protection
+                    SizedBox(height: isPhone ? 6 : 4), // More spacing on phones
+                    // Subtitle with proper spacing
                     Text(
                       '${item['year']} • ${item['genre']}',
                       style: TextStyle(
@@ -570,28 +571,24 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    // Spacer to push rating to bottom
                     Spacer(),
-                    // Bottom row with rating and duration
+                    // Rating and duration row with better layout
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Icon(Icons.star, color: Color(0xFFE6B17A), size: fontSizes['rating']! + 1),
-                        SizedBox(width: 2),
-                        Flexible(
-                          flex: 2,
-                          child: Text(
-                            '${item['rating']}',
-                            style: TextStyle(
-                              color: Color(0xFFE6B17A),
-                              fontSize: fontSizes['rating']!,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        Icon(Icons.star, color: Color(0xFFE6B17A), size: fontSizes['rating']! + 2),
+                        SizedBox(width: 4),
+                        Text(
+                          '${item['rating']}',
+                          style: TextStyle(
+                            color: Color(0xFFE6B17A),
+                            fontSize: fontSizes['rating']!,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        SizedBox(width: 4),
+                        Spacer(),
                         Flexible(
-                          flex: 3,
                           child: Text(
                             item['duration'],
                             style: TextStyle(
@@ -635,13 +632,6 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
               decoration: BoxDecoration(
                 color: Color(0xFF2A3142),
                 borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Icon(
-                  Icons.touch_app,
-                  color: Colors.white.withOpacity(0.3),
-                  size: 20,
-                ),
               ),
             ),
             SizedBox(width: 16),
@@ -713,83 +703,14 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
                   ),
                 ],
               ),
-            ),
-            SizedBox(width: 8),
-            _buildActionMenu(item),
+            )
           ],
         ),
       ),
     );
   }
 
-  Widget _buildActionMenu(Map<String, dynamic> item) {
-    return PopupMenuButton<String>(
-      icon: Container(
-        padding: EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.5),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Icon(Icons.more_vert, color: Colors.white, size: 12),
-      ),
-      color: Color(0xFF2A3142),
-      elevation: 8,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      itemBuilder: (context) => [
-        PopupMenuItem(
-          value: 'watched',
-          child: Row(
-            children: [
-              Icon(Icons.check_circle_outline, color: Color(0xFFE6B17A), size: 18),
-              SizedBox(width: 10),
-              Flexible(
-                child: Text(
-                  'Mark as Watched',
-                  style: TextStyle(color: Colors.white, fontSize: 14),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'remove',
-          child: Row(
-            children: [
-              Icon(Icons.delete_outline, color: Colors.red, size: 18),
-              SizedBox(width: 10),
-              Flexible(
-                child: Text(
-                  'Remove from Watchlist',
-                  style: TextStyle(color: Colors.white, fontSize: 14),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'share',
-          child: Row(
-            children: [
-              Icon(Icons.share_outlined, color: Color(0xFF8B94A8), size: 18),
-              SizedBox(width: 10),
-              Flexible(
-                child: Text(
-                  'Share',
-                  style: TextStyle(color: Colors.white, fontSize: 14),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-      onSelected: (value) {
-        _handleMenuAction(value, item);
-      },
-    );
-  }
+
 
   Widget _buildEmptyState() {
     return Center(

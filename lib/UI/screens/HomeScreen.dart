@@ -107,6 +107,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       'type': 'Movie',
       'isInWatchlist': false,
     },
+    {
+      'title': 'Interstellar',
+      'year': '2014',
+      'genre': 'Sci-Fi',
+      'rating': 8.6,
+      'type': 'Movie',
+      'isInWatchlist': false,
+    },
+    {
+      'title': 'The Dark Knight',
+      'year': '2008',
+      'genre': 'Action',
+      'rating': 9.0,
+      'type': 'Movie',
+      'isInWatchlist': true,
+    },
   ];
 
   @override
@@ -650,16 +666,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       builder: (context, constraints) {
         final screenWidth = constraints.maxWidth;
 
-        // Responsive columns similar to watchlist
+        // Calculate responsive columns
         int columns;
         if (screenWidth < 500) {
-          columns = 2; // Phones: 2 columns
-        } else if (screenWidth < 750) {
-          columns = 3; // Large phones/small tablets
-        } else if (screenWidth < 950) {
-          columns = 4; // Tablets
+          columns = 2;
+        } else if (screenWidth < 700) {
+          columns = 3;
+        } else if (screenWidth < 900) {
+          columns = 4;
+        } else if (screenWidth < 1200) {
+          columns = 5;
+        } else if (screenWidth < 1600) {
+          columns = 6;
         } else {
-          columns = 5; // Larger screens
+          columns = 7;
         }
 
         return GridView.builder(
@@ -667,149 +687,143 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           padding: EdgeInsets.all(20),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: columns,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 16,
-            childAspectRatio: screenWidth < 500 ? 0.75 : 0.7, // Taller on phones
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 20,
+            childAspectRatio: 0.65, // Movie poster aspect ratio (approximately 2:3)
           ),
           itemCount: results.length,
           itemBuilder: (context, index) {
-            return _buildSearchResultCard(results[index], screenWidth);
+            return _buildSearchResultCard(results[index]);
           },
         );
       },
     );
   }
 
-  Widget _buildSearchResultCard(Map<String, dynamic> item, double screenWidth) {
-    final isPhone = screenWidth < 500;
-
-    // Responsive font sizes
-    Map<String, double> fontSizes;
-    if (screenWidth < 500) {
-      fontSizes = {
-        'title': 15.0,
-        'subtitle': 12.0,
-        'rating': 11.0,
-      };
-    } else if (screenWidth < 750) {
-      fontSizes = {
-        'title': 14.0,
-        'subtitle': 11.0,
-        'rating': 10.0,
-      };
-    } else {
-      fontSizes = {
-        'title': 13.0,
-        'subtitle': 10.0,
-        'rating': 10.0,
-      };
-    }
-
+  // Unified search result card with proper aspect ratio
+  Widget _buildSearchResultCard(Map<String, dynamic> item) {
     return Container(
       decoration: BoxDecoration(
         color: Color(0xFF1A1F2E),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Color(0xFF2A3142), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Poster area
+          // Poster area - takes up most of the card
           Expanded(
-            flex: 3,
-            child: Stack(
-              children: [
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Color(0xFF2A3142),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                  ),
-                ),
-                // Bookmark button in top-right corner
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        item['isInWatchlist'] = !item['isInWatchlist'];
-                      });
-                    },
-                    child: Container(
-                      padding: EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: item['isInWatchlist']
-                            ? Color(0xFFE6B17A)
-                            : Colors.black.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        item['isInWatchlist']
-                            ? Icons.bookmark
-                            : Icons.bookmark_outline,
-                        color: item['isInWatchlist']
-                            ? Color(0xFF0A0E1A)
-                            : Colors.white,
-                        size: 16,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Info area with better space management
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: EdgeInsets.all(isPhone ? 12 : 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Color(0xFF2A3142),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Stack(
                 children: [
-                  // Title - single line only
-                  Text(
-                    item['title'],
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: fontSizes['title']!,
-                      fontWeight: FontWeight.w600,
-                      height: 1.2,
+                  // Placeholder for movie poster
+                  Center(
+                    child: Icon(
+                      item['type'] == 'Movie' ? Icons.movie : Icons.tv,
+                      color: Color(0xFF8B94A8).withOpacity(0.5),
+                      size: 32,
                     ),
-                    maxLines: 1, // Single line as requested
-                    overflow: TextOverflow.ellipsis,
                   ),
-                  SizedBox(height: isPhone ? 6 : 4),
-                  // Subtitle
-                  Text(
-                    '${item['year']} • ${item['type']}',
-                    style: TextStyle(
-                      color: Color(0xFF8B94A8),
-                      fontSize: fontSizes['subtitle']!,
-                      height: 1.1,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  // Spacer to push rating to bottom
-                  Spacer(),
-                  // Rating row
-                  Row(
-                    children: [
-                      Icon(Icons.star, color: Color(0xFFE6B17A), size: fontSizes['rating']! + 2),
-                      SizedBox(width: 4),
-                      Text(
-                        '${item['rating']}',
-                        style: TextStyle(
-                          color: Color(0xFFE6B17A),
-                          fontSize: fontSizes['rating']!,
-                          fontWeight: FontWeight.w600,
+                  // Bookmark button
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          item['isInWatchlist'] = !item['isInWatchlist'];
+                        });
+                      },
+                      child: Container(
+                        padding: EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: item['isInWatchlist']
+                              ? Color(0xFFE6B17A)
+                              : Colors.black.withOpacity(0.7),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          item['isInWatchlist']
+                              ? Icons.bookmark
+                              : Icons.bookmark_outline,
+                          color: item['isInWatchlist']
+                              ? Color(0xFF0A0E1A)
+                              : Colors.white,
+                          size: 16,
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),
+            ),
+          ),
+          // Info area - compact
+          Container(
+            padding: EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title
+                Text(
+                  item['title'],
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    height: 1.2,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 6),
+                // Year and type
+                Text(
+                  '${item['year']} • ${item['type']}',
+                  style: TextStyle(
+                    color: Color(0xFF8B94A8),
+                    fontSize: 12,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 8),
+                // Rating
+                Row(
+                  children: [
+                    Icon(Icons.star, color: Color(0xFFE6B17A), size: 14),
+                    SizedBox(width: 4),
+                    Text(
+                      '${item['rating']}',
+                      style: TextStyle(
+                        color: Color(0xFFE6B17A),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Spacer(),
+                    // Genre chip
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Color(0xFF2A3142),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        item['genre'],
+                        style: TextStyle(
+                          color: Color(0xFF8B94A8),
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],

@@ -646,32 +646,75 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
 
-    return GridView.builder(
-      physics: const BouncingScrollPhysics(),
-      padding: EdgeInsets.all(20),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.65,
-      ),
-      itemCount: results.length,
-      itemBuilder: (context, index) {
-        return _buildSearchResultCard(results[index]);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+
+        // Responsive columns similar to watchlist
+        int columns;
+        if (screenWidth < 500) {
+          columns = 2; // Phones: 2 columns
+        } else if (screenWidth < 750) {
+          columns = 3; // Large phones/small tablets
+        } else if (screenWidth < 950) {
+          columns = 4; // Tablets
+        } else {
+          columns = 5; // Larger screens
+        }
+
+        return GridView.builder(
+          physics: const BouncingScrollPhysics(),
+          padding: EdgeInsets.all(20),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 16,
+            childAspectRatio: screenWidth < 500 ? 0.75 : 0.7, // Taller on phones
+          ),
+          itemCount: results.length,
+          itemBuilder: (context, index) {
+            return _buildSearchResultCard(results[index], screenWidth);
+          },
+        );
       },
     );
   }
 
-  Widget _buildSearchResultCard(Map<String, dynamic> item) {
+  Widget _buildSearchResultCard(Map<String, dynamic> item, double screenWidth) {
+    final isPhone = screenWidth < 500;
+
+    // Responsive font sizes
+    Map<String, double> fontSizes;
+    if (screenWidth < 500) {
+      fontSizes = {
+        'title': 15.0,
+        'subtitle': 12.0,
+        'rating': 11.0,
+      };
+    } else if (screenWidth < 750) {
+      fontSizes = {
+        'title': 14.0,
+        'subtitle': 11.0,
+        'rating': 10.0,
+      };
+    } else {
+      fontSizes = {
+        'title': 13.0,
+        'subtitle': 10.0,
+        'rating': 10.0,
+      };
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Color(0xFF1A1F2E),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Color(0xFF2A3142), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Poster area
           Expanded(
             flex: 3,
             child: Stack(
@@ -680,12 +723,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: Color(0xFF2A3142),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                   ),
                 ),
+                // Bookmark button in top-right corner
                 Positioned(
-                  top: 6,
-                  right: 6,
+                  top: 8,
+                  right: 8,
                   child: GestureDetector(
                     onTap: () {
                       setState(() {
@@ -693,13 +737,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       });
                     },
                     child: Container(
-                      width: 20,
-                      height: 20,
+                      padding: EdgeInsets.all(6),
                       decoration: BoxDecoration(
                         color: item['isInWatchlist']
                             ? Color(0xFFE6B17A)
                             : Colors.black.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
                         item['isInWatchlist']
@@ -708,7 +751,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         color: item['isInWatchlist']
                             ? Color(0xFF0A0E1A)
                             : Colors.white,
-                        size: 12,
+                        size: 16,
                       ),
                     ),
                   ),
@@ -716,57 +759,54 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ],
             ),
           ),
+          // Info area with better space management
           Expanded(
             flex: 2,
             child: Padding(
-              padding: EdgeInsets.all(4), // Further reduced padding
+              padding: EdgeInsets.all(isPhone ? 12 : 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Title - single line only
                   Text(
                     item['title'],
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 10, // Further reduced
+                      fontSize: fontSizes['title']!,
                       fontWeight: FontWeight.w600,
+                      height: 1.2,
                     ),
-                    maxLines: 1,
+                    maxLines: 1, // Single line as requested
                     overflow: TextOverflow.ellipsis,
                   ),
-                  SizedBox(height: 1),
+                  SizedBox(height: isPhone ? 6 : 4),
+                  // Subtitle
                   Text(
                     '${item['year']} • ${item['type']}',
                     style: TextStyle(
                       color: Color(0xFF8B94A8),
-                      fontSize: 8, // Further reduced
+                      fontSize: fontSizes['subtitle']!,
+                      height: 1.1,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  // Spacer to push rating to bottom
                   Spacer(),
-                  // More robust rating layout that handles small spaces
-                  Container(
-                    width: double.infinity,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.star, color: Color(0xFFE6B17A), size: 8),
-                        SizedBox(width: 1),
-                        Expanded(
-                          child: Text(
-                            '${item['rating']}',
-                            style: TextStyle(
-                              color: Color(0xFFE6B17A),
-                              fontSize: 8, // Much smaller font
-                              fontWeight: FontWeight.w600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
+                  // Rating row
+                  Row(
+                    children: [
+                      Icon(Icons.star, color: Color(0xFFE6B17A), size: fontSizes['rating']! + 2),
+                      SizedBox(width: 4),
+                      Text(
+                        '${item['rating']}',
+                        style: TextStyle(
+                          color: Color(0xFFE6B17A),
+                          fontSize: fontSizes['rating']!,
+                          fontWeight: FontWeight.w600,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),

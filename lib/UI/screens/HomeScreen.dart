@@ -914,38 +914,63 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildQuickActions() {
     return SliverToBoxAdapter(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // On larger screens, use a sweet spot size - not too wide, not too small
-            if (constraints.maxWidth > 800) {
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 280, // Bigger than 200px but not full width
-                    child: _buildActionCard('My Watchlist', Icons.bookmark_outline, '12 movies', 'watchlist'),
+      child: Column(
+        children: [
+          // Section header
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                Text(
+                  'My Collection',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
                   ),
-                  SizedBox(width: 24), // Comfortable spacing
-                  Container(
-                    width: 280, // Same size for consistency
-                    child: _buildActionCard('My Ratings', Icons.star_outline, '47 rated', 'ratings'),
-                  ),
-                ],
-              );
-            } else {
-              // On smaller screens, use full width with Expanded
-              return Row(
-                children: [
-                  Expanded(child: _buildActionCard('My Watchlist', Icons.bookmark_outline, '12 movies', 'watchlist')),
-                  SizedBox(width: 16),
-                  Expanded(child: _buildActionCard('My Ratings', Icons.star_outline, '47 rated', 'ratings')),
-                ],
-              );
-            }
-          },
-        ),
+                ),
+                Spacer(),
+              ],
+            ),
+          ),
+          SizedBox(height: 16),
+          // Action cards
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // On larger screens, align to the left instead of centering
+                if (constraints.maxWidth > 800) {
+                  return Row(
+                    children: [
+                      // Fixed width cards on the left
+                      Container(
+                        width: 280,
+                        child: _buildActionCard('My Watchlist', Icons.bookmark_outline, '12 movies', 'watchlist'),
+                      ),
+                      SizedBox(width: 24),
+                      Container(
+                        width: 280,
+                        child: _buildActionCard('My Ratings', Icons.star_outline, '47 rated', 'ratings'),
+                      ),
+                      // Spacer pushes everything to the left and fills the remaining space
+                      Spacer(),
+                    ],
+                  );
+                } else {
+                  // On smaller screens, use full width with Expanded (unchanged)
+                  return Row(
+                    children: [
+                      Expanded(child: _buildActionCard('My Watchlist', Icons.bookmark_outline, '12 movies', 'watchlist')),
+                      SizedBox(width: 16),
+                      Expanded(child: _buildActionCard('My Ratings', Icons.star_outline, '47 rated', 'ratings')),
+                    ],
+                  );
+                }
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

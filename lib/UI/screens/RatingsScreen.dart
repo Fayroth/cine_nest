@@ -701,67 +701,76 @@ class _RatingDetailsSheet extends StatefulWidget {
 class _RatingDetailsSheetState extends State<_RatingDetailsSheet> {
   late double currentRating;
   late TextEditingController reviewController;
-  late ScrollController scrollController;
-  bool isTextFieldFocused = false;
+  bool isEditingReview = false;
 
   @override
   void initState() {
     super.initState();
     currentRating = widget.item['userRating'].toDouble();
     reviewController = TextEditingController(text: widget.item['review'] ?? '');
-    scrollController = ScrollController();
   }
 
   @override
   void dispose() {
     reviewController.dispose();
-    scrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.9,
-      decoration: BoxDecoration(
-        color: Color(0xFF1A1F2E),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-        border: Border.all(color: Color(0xFF2A3142), width: 1),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            margin: EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: Color(0xFF2A3142),
-              borderRadius: BorderRadius.circular(2),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+        final screenHeight = MediaQuery.of(context).size.height;
+        final maxWidth = screenWidth > 600 ? 500.0 : screenWidth * 0.9;
+
+        // Compact height for quick edit card
+        double dialogHeight;
+        if (isEditingReview) {
+          // Slightly taller when editing review
+          dialogHeight = screenHeight < 700 ? screenHeight * 0.55 : screenHeight * 0.50;
+        } else {
+          dialogHeight = screenHeight < 700 ? screenHeight * 0.45 : screenHeight * 0.40;
+        }
+        dialogHeight = dialogHeight.clamp(350.0, 450.0); // Min and max constraints
+
+        // Fix: Ensure minHeight is never greater than maxHeight
+        final minHeight = dialogHeight < 350 ? dialogHeight : 350.0;
+
+        return Center(
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: 300),
+            width: maxWidth,
+            constraints: BoxConstraints(
+              maxHeight: dialogHeight,
+              minHeight: minHeight, // Now guaranteed to be <= maxHeight
             ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              controller: scrollController,
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom: 20,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            margin: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            decoration: BoxDecoration(
+              color: Color(0xFF1A1F2E),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Color(0xFF2A3142), width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Compact header
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Color(0xFF2A3142), width: 1),
+                    ),
+                  ),
+                  child: Row(
                     children: [
-                      Container(
-                        width: 100,
-                        height: 150,
-                        decoration: BoxDecoration(
-                          color: Color(0xFF2A3142),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      SizedBox(width: 20),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -770,24 +779,48 @@ class _RatingDetailsSheetState extends State<_RatingDetailsSheet> {
                               widget.item['title'],
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 22,
+                                fontSize: 18,
                                 fontWeight: FontWeight.w700,
                               ),
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              '${widget.item['year']} • ${widget.item['genre']}',
-                              style: TextStyle(
-                                color: Color(0xFF8B94A8),
-                                fontSize: 16,
-                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             SizedBox(height: 4),
                             Text(
-                              widget.item['duration'],
+                              '${widget.item['year']} • ${widget.item['genre']} • ${widget.item['duration']}',
                               style: TextStyle(
                                 color: Color(0xFF8B94A8),
-                                fontSize: 14,
+                                fontSize: 13,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Current rating display
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Color(0xFFE6B17A).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Color(0xFFE6B17A), width: 1),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              '${currentRating.toInt()}/10',
+                              style: TextStyle(
+                                color: Color(0xFFE6B17A),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              'Your Rating',
+                              style: TextStyle(
+                                color: Color(0xFFE6B17A).withOpacity(0.8),
+                                fontSize: 10,
                               ),
                             ),
                           ],
@@ -795,132 +828,179 @@ class _RatingDetailsSheetState extends State<_RatingDetailsSheet> {
                       ),
                     ],
                   ),
-                  SizedBox(height: 32),
-                  Text(
-                    'Your Rating',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  Center(
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(10, (index) {
-                            final ratingValue = index + 1;
-                            final isSelected = ratingValue <= currentRating;
+                ),
 
-                            return GestureDetector(
+                // Rating selector and review
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Compact rating selector with circular buttons
+                        Text(
+                          'Quick Edit Rating',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(height: 12),
+                        // Single row of circular rating buttons
+                        Center(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: List.generate(10, (index) {
+                                final ratingValue = index + 1;
+                                final isSelected = ratingValue <= currentRating;
+
+                                return GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      currentRating = ratingValue.toDouble();
+                                    });
+                                  },
+                                  child: Container(
+                                    margin: EdgeInsets.symmetric(horizontal: 3),
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? Color(0xFFE6B17A)
+                                          : Color(0xFF2A3142),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? Color(0xFFE6B17A)
+                                            : Color(0xFF3A4155),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        '$ratingValue',
+                                        style: TextStyle(
+                                          color: isSelected
+                                              ? Color(0xFF0A0E1A)
+                                              : Color(0xFF8B94A8),
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 20),
+                        // Compact review section
+                        Row(
+                          children: [
+                            Text(
+                              'Your Review',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Spacer(),
+                            GestureDetector(
                               onTap: () {
                                 setState(() {
-                                  currentRating = ratingValue.toDouble();
+                                  isEditingReview = !isEditingReview;
                                 });
                               },
-                              child: Container(
-                                margin: EdgeInsets.symmetric(horizontal: 2),
-                                padding: EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? Color(0xFFE6B17A)
-                                      : Color(0xFF2A3142),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Text(
-                                  '$ratingValue',
-                                  style: TextStyle(
-                                    color: isSelected
-                                        ? Color(0xFF0A0E1A)
-                                        : Color(0xFF8B94A8),
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                              child: Text(
+                                isEditingReview ? 'Done' : 'Edit',
+                                style: TextStyle(
+                                  color: Color(0xFFE6B17A),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                            );
-                          }),
+                            ),
+                          ],
                         ),
-                        SizedBox(height: 16),
-                        Text(
-                          '${currentRating.toInt()} out of 10',
-                          style: TextStyle(
-                            color: Color(0xFFE6B17A),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                        SizedBox(height: 8),
+                        AnimatedContainer(
+                          duration: Duration(milliseconds: 300),
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Color(0xFF0A0E1A),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: isEditingReview ? Color(0xFFE6B17A) : Color(0xFF2A3142),
+                                width: 1
+                            ),
+                          ),
+                          child: isEditingReview
+                              ? TextField(
+                            controller: reviewController,
+                            maxLines: 3,
+                            style: TextStyle(color: Colors.white, fontSize: 14),
+                            decoration: InputDecoration(
+                              hintText: 'Add your thoughts...',
+                              hintStyle: TextStyle(color: Color(0xFF8B94A8)),
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          )
+                              : Text(
+                            reviewController.text.isEmpty
+                                ? 'No review yet. Tap Edit to add one.'
+                                : reviewController.text,
+                            style: TextStyle(
+                              color: reviewController.text.isEmpty
+                                  ? Color(0xFF8B94A8)
+                                  : Colors.white,
+                              fontSize: 14,
+                              fontStyle: reviewController.text.isEmpty
+                                  ? FontStyle.italic
+                                  : FontStyle.normal,
+                            ),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  SizedBox(height: 32),
-                  Text(
-                    'Your Review',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  Container(
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Color(0xFF0A0E1A),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Color(0xFF2A3142), width: 1),
-                    ),
-                    child: Focus(
-                      onFocusChange: (hasFocus) {
-                        setState(() {
-                          isTextFieldFocused = hasFocus;
-                        });
+                ),
 
-                        if (hasFocus) {
-                          // Wait for keyboard to appear, then scroll to text field
-                          Future.delayed(Duration(milliseconds: 300), () {
-                            if (scrollController.hasClients) {
-                              scrollController.animateTo(
-                                scrollController.position.maxScrollExtent,
-                                duration: Duration(milliseconds: 300),
-                                curve: Curves.easeInOut,
-                              );
-                            }
-                          });
-                        }
-                      },
-                      child: TextField(
-                        controller: reviewController,
-                        maxLines: 5,
-                        style: TextStyle(color: Colors.white, fontSize: 16),
-                        decoration: InputDecoration(
-                          hintText: 'Share your thoughts about this ${widget.item['type'].toLowerCase()}...',
-                          hintStyle: TextStyle(color: Color(0xFF8B94A8)),
-                          border: InputBorder.none,
-                        ),
-                      ),
+                // Action buttons
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Color(0xFF2A3142), width: 1),
                     ),
                   ),
-                  SizedBox(height: 32),
-                  Row(
+                  child: Row(
                     children: [
+                      // Cancel button
                       Expanded(
                         child: GestureDetector(
                           onTap: () => Navigator.pop(context),
                           child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 16),
+                            padding: EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               color: Color(0xFF2A3142),
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Color(0xFF3A4155), width: 1),
                             ),
                             child: Center(
                               child: Text(
                                 'Cancel',
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -928,17 +1008,18 @@ class _RatingDetailsSheetState extends State<_RatingDetailsSheet> {
                           ),
                         ),
                       ),
-                      SizedBox(width: 16),
+                      SizedBox(width: 8),
+                      // Save button
                       Expanded(
                         child: GestureDetector(
                           onTap: () {
-                            // Save changes
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('Rating updated'),
                                 backgroundColor: Color(0xFF2A3142),
                                 behavior: SnackBarBehavior.floating,
+                                duration: Duration(seconds: 2),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -946,17 +1027,17 @@ class _RatingDetailsSheetState extends State<_RatingDetailsSheet> {
                             );
                           },
                           child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 16),
+                            padding: EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               color: Color(0xFFE6B17A),
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Center(
                               child: Text(
-                                'Save Changes',
+                                'Save',
                                 style: TextStyle(
                                   color: Color(0xFF0A0E1A),
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -964,16 +1045,46 @@ class _RatingDetailsSheetState extends State<_RatingDetailsSheet> {
                           ),
                         ),
                       ),
+                      SizedBox(width: 8),
+                      // More info button
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pop(context);
+                          // TODO: Navigate to full movie details page
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Opening full details...'),
+                              backgroundColor: Color(0xFF2A3142),
+                              behavior: SnackBarBehavior.floating,
+                              duration: Duration(seconds: 1),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Color(0xFF2A3142),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Color(0xFF3A4155), width: 1),
+                          ),
+                          child: Icon(
+                            Icons.arrow_forward,
+                            color: Color(0xFFE6B17A),
+                            size: 18,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                  // Add extra spacing at bottom when keyboard is visible
-                  SizedBox(height: isTextFieldFocused ? MediaQuery.of(context).viewInsets.bottom + 100 : 0),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

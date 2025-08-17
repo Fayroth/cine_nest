@@ -107,6 +107,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       'type': 'Movie',
       'isInWatchlist': false,
     },
+    {
+      'title': 'Interstellar',
+      'year': '2014',
+      'genre': 'Sci-Fi',
+      'rating': 8.6,
+      'type': 'Movie',
+      'isInWatchlist': false,
+    },
+    {
+      'title': 'The Dark Knight',
+      'year': '2008',
+      'genre': 'Action',
+      'rating': 9.0,
+      'type': 'Movie',
+      'isInWatchlist': true,
+    },
   ];
 
   @override
@@ -246,6 +262,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      useSafeArea: false,
+      enableDrag: true,
       builder: (context) => _MovieDetailsSheet(
         title: title,
         year: year,
@@ -644,130 +662,168 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
 
-    return GridView.builder(
-      physics: const BouncingScrollPhysics(),
-      padding: EdgeInsets.all(20),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.65,
-      ),
-      itemCount: results.length,
-      itemBuilder: (context, index) {
-        return _buildSearchResultCard(results[index]);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+
+        // Calculate responsive columns
+        int columns;
+        if (screenWidth < 500) {
+          columns = 2;
+        } else if (screenWidth < 700) {
+          columns = 3;
+        } else if (screenWidth < 900) {
+          columns = 4;
+        } else if (screenWidth < 1200) {
+          columns = 5;
+        } else if (screenWidth < 1600) {
+          columns = 6;
+        } else {
+          columns = 7;
+        }
+
+        return GridView.builder(
+          physics: const BouncingScrollPhysics(),
+          padding: EdgeInsets.all(20),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 20,
+            childAspectRatio: 0.65, // Movie poster aspect ratio (approximately 2:3)
+          ),
+          itemCount: results.length,
+          itemBuilder: (context, index) {
+            return _buildSearchResultCard(results[index]);
+          },
+        );
       },
     );
   }
 
+  // Unified search result card with proper aspect ratio
   Widget _buildSearchResultCard(Map<String, dynamic> item) {
     return Container(
       decoration: BoxDecoration(
         color: Color(0xFF1A1F2E),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Color(0xFF2A3142), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Poster area - takes up most of the card
           Expanded(
-            flex: 3,
-            child: Stack(
-              children: [
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Color(0xFF2A3142),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                  ),
-                ),
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        item['isInWatchlist'] = !item['isInWatchlist'];
-                      });
-                    },
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: item['isInWatchlist']
-                            ? Color(0xFFE6B17A)
-                            : Colors.black.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Icon(
-                        item['isInWatchlist']
-                            ? Icons.bookmark
-                            : Icons.bookmark_outline,
-                        color: item['isInWatchlist']
-                            ? Color(0xFF0A0E1A)
-                            : Colors.white,
-                        size: 12,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: EdgeInsets.all(4), // Further reduced padding
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Color(0xFF2A3142),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Stack(
                 children: [
-                  Text(
-                    item['title'],
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10, // Further reduced
-                      fontWeight: FontWeight.w600,
+                  // Placeholder for movie poster
+                  Center(
+                    child: Icon(
+                      item['type'] == 'Movie' ? Icons.movie : Icons.tv,
+                      color: Color(0xFF8B94A8).withOpacity(0.5),
+                      size: 32,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                  SizedBox(height: 1),
-                  Text(
-                    '${item['year']} • ${item['type']}',
-                    style: TextStyle(
-                      color: Color(0xFF8B94A8),
-                      fontSize: 8, // Further reduced
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Spacer(),
-                  // More robust rating layout that handles small spaces
-                  Container(
-                    width: double.infinity,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.star, color: Color(0xFFE6B17A), size: 8),
-                        SizedBox(width: 1),
-                        Expanded(
-                          child: Text(
-                            '${item['rating']}',
-                            style: TextStyle(
-                              color: Color(0xFFE6B17A),
-                              fontSize: 8, // Much smaller font
-                              fontWeight: FontWeight.w600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
+                  // Bookmark button
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          item['isInWatchlist'] = !item['isInWatchlist'];
+                        });
+                      },
+                      child: Container(
+                        padding: EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: item['isInWatchlist']
+                              ? Color(0xFFE6B17A)
+                              : Colors.black.withOpacity(0.7),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      ],
+                        child: Icon(
+                          item['isInWatchlist']
+                              ? Icons.bookmark
+                              : Icons.bookmark_outline,
+                          color: item['isInWatchlist']
+                              ? Color(0xFF0A0E1A)
+                              : Colors.white,
+                          size: 16,
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
+            ),
+          ),
+          // Info area - compact
+          Container(
+            padding: EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title
+                Text(
+                  item['title'],
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    height: 1.2,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 6),
+                // Year and type
+                Text(
+                  '${item['year']} • ${item['type']}',
+                  style: TextStyle(
+                    color: Color(0xFF8B94A8),
+                    fontSize: 12,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 8),
+                // Rating
+                Row(
+                  children: [
+                    Icon(Icons.star, color: Color(0xFFE6B17A), size: 14),
+                    SizedBox(width: 4),
+                    Text(
+                      '${item['rating']}',
+                      style: TextStyle(
+                        color: Color(0xFFE6B17A),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Spacer(),
+                    // Genre chip
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Color(0xFF2A3142),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        item['genre'],
+                        style: TextStyle(
+                          color: Color(0xFF8B94A8),
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -912,38 +968,63 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildQuickActions() {
     return SliverToBoxAdapter(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // On larger screens, use a sweet spot size - not too wide, not too small
-            if (constraints.maxWidth > 800) {
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 280, // Bigger than 200px but not full width
-                    child: _buildActionCard('My Watchlist', Icons.bookmark_outline, '12 movies', 'watchlist'),
+      child: Column(
+        children: [
+          // Section header
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                Text(
+                  'My Collection',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
                   ),
-                  SizedBox(width: 24), // Comfortable spacing
-                  Container(
-                    width: 280, // Same size for consistency
-                    child: _buildActionCard('My Ratings', Icons.star_outline, '47 rated', 'ratings'),
-                  ),
-                ],
-              );
-            } else {
-              // On smaller screens, use full width with Expanded
-              return Row(
-                children: [
-                  Expanded(child: _buildActionCard('My Watchlist', Icons.bookmark_outline, '12 movies', 'watchlist')),
-                  SizedBox(width: 16),
-                  Expanded(child: _buildActionCard('My Ratings', Icons.star_outline, '47 rated', 'ratings')),
-                ],
-              );
-            }
-          },
-        ),
+                ),
+                Spacer(),
+              ],
+            ),
+          ),
+          SizedBox(height: 16),
+          // Action cards
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // On larger screens, align to the left instead of centering
+                if (constraints.maxWidth > 800) {
+                  return Row(
+                    children: [
+                      // Fixed width cards on the left
+                      Container(
+                        width: 280,
+                        child: _buildActionCard('My Watchlist', Icons.bookmark_outline, '12 movies', 'watchlist'),
+                      ),
+                      SizedBox(width: 24),
+                      Container(
+                        width: 280,
+                        child: _buildActionCard('My Ratings', Icons.star_outline, '47 rated', 'ratings'),
+                      ),
+                      // Spacer pushes everything to the left and fills the remaining space
+                      Spacer(),
+                    ],
+                  );
+                } else {
+                  // On smaller screens, use full width with Expanded (unchanged)
+                  return Row(
+                    children: [
+                      Expanded(child: _buildActionCard('My Watchlist', Icons.bookmark_outline, '12 movies', 'watchlist')),
+                      SizedBox(width: 16),
+                      Expanded(child: _buildActionCard('My Ratings', Icons.star_outline, '47 rated', 'ratings')),
+                    ],
+                  );
+                }
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1227,49 +1308,58 @@ class _MovieDetailsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
-      decoration: BoxDecoration(
-        color: Color(0xFF1A1F2E),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-        border: Border.all(color: Color(0xFF2A3142), width: 1),
-      ),
-      child: Column(
-        children: [
-          // Handle bar
-          Container(
-            width: 40,
-            height: 4,
-            margin: EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: Color(0xFF2A3142),
-              borderRadius: BorderRadius.circular(2),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+        final screenHeight = MediaQuery.of(context).size.height;
+        final maxWidth = screenWidth > 600 ? 500.0 : screenWidth * 0.9;
+
+        // Compact height for quick info card
+        double dialogHeight;
+        if (screenHeight < 700) {
+          dialogHeight = screenHeight * 0.45; // Very small phones
+        } else if (screenHeight < 900) {
+          dialogHeight = screenHeight * 0.40; // Regular phones
+        } else {
+          dialogHeight = 380.0; // Fixed max height for larger screens
+        }
+
+        // Fix: Ensure minHeight is never greater than maxHeight
+        final minHeight = dialogHeight < 320 ? dialogHeight : 320.0;
+
+        return Center(
+          child: Container(
+            width: maxWidth,
+            constraints: BoxConstraints(
+              maxHeight: dialogHeight,
+              minHeight: minHeight, // Now guaranteed to be <= maxHeight
             ),
-          ),
-
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Movie poster and basic info
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            margin: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            decoration: BoxDecoration(
+              color: Color(0xFF1A1F2E),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Color(0xFF2A3142), width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Compact header with title and close button
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Color(0xFF2A3142), width: 1),
+                    ),
+                  ),
+                  child: Row(
                     children: [
-                      // Movie poster
-                      Container(
-                        width: 120,
-                        height: 180,
-                        decoration: BoxDecoration(
-                          color: Color(0xFF2A3142),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Color(0xFF3A4155), width: 1),
-                        ),
-                      ),
-                      SizedBox(width: 20),
-
-                      // Movie details
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1278,58 +1368,44 @@ class _MovieDetailsSheet extends StatelessWidget {
                               title,
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 24,
+                                fontSize: 18,
                                 fontWeight: FontWeight.w700,
                               ),
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              '$year • $genre',
-                              style: TextStyle(
-                                color: Color(0xFF8B94A8),
-                                fontSize: 16,
-                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             SizedBox(height: 4),
                             Text(
-                              duration,
+                              '$year • $genre • $duration',
                               style: TextStyle(
                                 color: Color(0xFF8B94A8),
-                                fontSize: 14,
+                                fontSize: 13,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            SizedBox(height: 16),
-
-                            // Rating
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Color(0xFFE6B17A).withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Color(0xFFE6B17A), width: 1),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.star, color: Color(0xFFE6B17A), size: 18),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    rating.toString(),
-                                    style: TextStyle(
-                                      color: Color(0xFFE6B17A),
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    '/10',
-                                    style: TextStyle(
-                                      color: Color(0xFFE6B17A).withOpacity(0.8),
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
+                          ],
+                        ),
+                      ),
+                      // Rating badge
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Color(0xFFE6B17A).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Color(0xFFE6B17A), width: 1),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.star, color: Color(0xFFE6B17A), size: 14),
+                            SizedBox(width: 4),
+                            Text(
+                              rating.toString(),
+                              style: TextStyle(
+                                color: Color(0xFFE6B17A),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
@@ -1337,33 +1413,36 @@ class _MovieDetailsSheet extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
 
-                  SizedBox(height: 24),
-
-                  // Synopsis
-                  Text(
-                    'Synopsis',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+                // Brief synopsis
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(16),
+                    child: Text(
+                      synopsis,
+                      style: TextStyle(
+                        color: Color(0xFF8B94A8),
+                        fontSize: 14,
+                        height: 1.4,
+                      ),
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  SizedBox(height: 12),
-                  Text(
-                    synopsis,
-                    style: TextStyle(
-                      color: Color(0xFF8B94A8),
-                      fontSize: 16,
-                      height: 1.5,
+                ),
+
+                // Quick action buttons
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Color(0xFF2A3142), width: 1),
                     ),
                   ),
-
-                  SizedBox(height: 32),
-
-                  // Action buttons
-                  Row(
+                  child: Row(
                     children: [
+                      // Add to Watchlist button
                       Expanded(
                         child: GestureDetector(
                           onTap: () {
@@ -1373,6 +1452,7 @@ class _MovieDetailsSheet extends StatelessWidget {
                                 content: Text('Added to watchlist'),
                                 backgroundColor: Color(0xFF2A3142),
                                 behavior: SnackBarBehavior.floating,
+                                duration: Duration(seconds: 2),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -1380,21 +1460,21 @@ class _MovieDetailsSheet extends StatelessWidget {
                             );
                           },
                           child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 16),
+                            padding: EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               color: Color(0xFFE6B17A),
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.bookmark_add, color: Color(0xFF0A0E1A), size: 20),
-                                SizedBox(width: 8),
+                                Icon(Icons.bookmark_add, color: Color(0xFF0A0E1A), size: 18),
+                                SizedBox(width: 6),
                                 Text(
-                                  'Add to Watchlist',
+                                  'Watchlist',
                                   style: TextStyle(
                                     color: Color(0xFF0A0E1A),
-                                    fontSize: 16,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -1403,36 +1483,46 @@ class _MovieDetailsSheet extends StatelessWidget {
                           ),
                         ),
                       ),
-                      SizedBox(width: 16),
+                      SizedBox(width: 12),
+                      // More info button
                       GestureDetector(
                         onTap: () {
                           Navigator.pop(context);
-                          // Navigate to full movie page
+                          // TODO: Navigate to full movie details page
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Opening full details...'),
+                              backgroundColor: Color(0xFF2A3142),
+                              behavior: SnackBarBehavior.floating,
+                              duration: Duration(seconds: 1),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          );
                         },
                         child: Container(
-                          padding: EdgeInsets.all(16),
+                          padding: EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: Color(0xFF2A3142),
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Color(0xFF3A4155), width: 1),
                           ),
                           child: Icon(
-                            Icons.info_outline,
+                            Icons.arrow_forward,
                             color: Color(0xFFE6B17A),
-                            size: 20,
+                            size: 18,
                           ),
                         ),
                       ),
                     ],
                   ),
-
-                  SizedBox(height: 20),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

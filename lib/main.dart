@@ -1,11 +1,48 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+// Conditional import for window_manager (only on desktop platforms)
+import 'dart:io' show Platform;
 
 import 'package:cine_nest/UI/screens/HomeScreen.dart';
 import 'package:cine_nest/UI/screens/WatchList.dart';
 import 'package:cine_nest/UI/screens/RatingsScreen.dart';
 import 'package:cine_nest/UI/screens/SearchDiscoverScreen.dart';
 
-void main() {
+// Conditionally import window_manager only if available
+import 'package:window_manager/window_manager.dart'
+if (dart.library.html) 'package:cine_nest/stubs/window_manager_stub.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Only configure window manager on desktop platforms (not web)
+  if (!kIsWeb) {
+    try {
+      // Check if we're on a desktop platform
+      if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+        await windowManager.ensureInitialized();
+
+        WindowOptions windowOptions = WindowOptions(
+          size: Size(1200, 800),        // Default size
+          minimumSize: Size(800, 600),  // Minimum window size
+          maximumSize: Size(2560, 1440), // Maximum window size
+          center: true,
+          backgroundColor: Colors.transparent,
+          skipTaskbar: false,
+          titleBarStyle: TitleBarStyle.normal,
+        );
+
+        windowManager.waitUntilReadyToShow(windowOptions, () async {
+          await windowManager.show();
+          await windowManager.focus();
+        });
+      }
+    } catch (e) {
+      // If Platform isn't available (shouldn't happen with kIsWeb check), just continue
+      print('Window manager initialization skipped: $e');
+    }
+  }
+
   runApp(const MyApp());
 }
 
@@ -16,6 +53,13 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'CineNest',
+      theme: ThemeData(
+        // Add a dark theme to match your app's aesthetic
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: Color(0xFF0A0E1A),
+        primaryColor: Color(0xFFE6B17A),
+      ),
+      debugShowCheckedModeBanner: false, // Remove debug banner
       initialRoute: '/home',
       onGenerateRoute: (settings) {
         // Custom route transitions for better performance
@@ -56,31 +100,4 @@ class MyApp extends StatelessWidget {
       },
     );
   }
-}
-
-// Alternative: If you prefer slide transitions, use this instead
-class SlideRoute extends PageRouteBuilder {
-  final Widget page;
-
-  SlideRoute({required this.page, RouteSettings? settings})
-      : super(
-    settings: settings,
-    pageBuilder: (context, animation, secondaryAnimation) => page,
-    transitionDuration: Duration(milliseconds: 300),
-    reverseTransitionDuration: Duration(milliseconds: 250),
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      const begin = Offset(1.0, 0.0);
-      const end = Offset.zero;
-      const curve = Curves.easeOutCubic;
-
-      var tween = Tween(begin: begin, end: end).chain(
-        CurveTween(curve: curve),
-      );
-
-      return SlideTransition(
-        position: animation.drive(tween),
-        child: child,
-      );
-    },
-  );
 }

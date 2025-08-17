@@ -158,10 +158,10 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
     return null;                            // No constraint for smaller screens
   }
 
-  // Helper method to get responsive font sizes
+  // Updated responsive font sizes - BIGGER fonts for laptop/tablet
   Map<String, double> _getResponsiveFontSizes(double screenWidth) {
     if (screenWidth < 500) {
-      // Phones: Larger, more readable fonts
+      // Phones: Keep original larger, readable fonts
       return {
         'title': 15.0,
         'subtitle': 12.0,
@@ -169,25 +169,28 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
         'duration': 10.0,
       };
     } else if (screenWidth < 750) {
+      // Large phones/small tablets: Increased from previous values
       return {
-        'title': 14.0,
-        'subtitle': 11.0,
-        'rating': 10.0,
-        'duration': 9.0,
+        'title': 16.0,    // Was 14.0
+        'subtitle': 13.0, // Was 11.0
+        'rating': 12.0,   // Was 10.0
+        'duration': 11.0, // Was 9.0
       };
-    } else if (screenWidth < 900) {
+    } else if (screenWidth < 1200) {
+      // Tablets and small laptops: Significantly increased
       return {
-        'title': 13.0,
-        'subtitle': 10.0,
-        'rating': 10.0,
-        'duration': 8.5,
+        'title': 16.0,    // Was 13.0 -> 12.0
+        'subtitle': 13.0, // Was 10.0 -> 9.0
+        'rating': 12.0,   // Was 10.0 -> 9.0
+        'duration': 11.0, // Was 8.5 -> 8.0
       };
     } else {
+      // Large laptops/desktops: Much bigger fonts
       return {
-        'title': 12.0,
-        'subtitle': 9.0,
-        'rating': 9.0,
-        'duration': 8.0,
+        'title': 15.0,    // Was 12.0
+        'subtitle': 12.0, // Was 9.0
+        'rating': 11.0,   // Was 9.0
+        'duration': 10.0, // Was 8.0
       };
     }
   }
@@ -369,8 +372,6 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
     );
   }
 
-
-
   Widget _buildStatItem(String value, String label, IconData icon) {
     return Column(
       children: [
@@ -542,7 +543,7 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
             Expanded(
               flex: isPhone ? 2 : 2, // Adequate space for text
               child: Padding(
-                padding: EdgeInsets.all(isPhone ? 12 : 8), // More padding on phones
+                padding: EdgeInsets.all(isPhone ? 12 : 10), // Slightly more padding for larger screens
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -556,10 +557,10 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
                         fontWeight: FontWeight.w600,
                         height: 1.2,
                       ),
-                      maxLines: 1, // Allow 2 lines on phones
+                      maxLines: isPhone ? 2 : 1, // Allow 2 lines on phones for longer titles
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: isPhone ? 6 : 4), // More spacing on phones
+                    SizedBox(height: isPhone ? 6 : 5), // Slightly more spacing on larger screens
                     // Subtitle with proper spacing
                     Text(
                       '${item['year']} • ${item['genre']}',
@@ -709,8 +710,6 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
       ),
     );
   }
-
-
 
   Widget _buildEmptyState() {
     return Center(

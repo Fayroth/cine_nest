@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 // Conditional import for window_manager (only on desktop platforms)
 import 'dart:io' show Platform;
 
-import 'package:cine_nest/UI/screens/HomeScreen.dart';
-import 'package:cine_nest/UI/screens/WatchList.dart';
-import 'package:cine_nest/UI/screens/RatingsScreen.dart';
+import 'package:cine_nest/UI/screens/home/HomeScreen.dart';
+import 'package:cine_nest/UI/screens/watchlist/WatchList.dart';
+import 'package:cine_nest/UI/screens/ratings/RatingsScreen.dart';
 import 'package:cine_nest/UI/screens/SearchDiscoverScreen.dart';
 
 // Conditionally import window_manager only if available

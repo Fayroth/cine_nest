@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 // Conditional import for window_manager (only on desktop platforms)
 import 'dart:io' show Platform;
 
+// Updated imports with new structure
 import 'package:cine_nest/UI/screens/home/HomeScreen.dart';
 import 'package:cine_nest/UI/screens/watchlist/WatchList.dart';
 import 'package:cine_nest/UI/screens/ratings/RatingsScreen.dart';
-import 'package:cine_nest/UI/screens/SearchDiscoverScreen.dart';
+import 'package:cine_nest/core/constants/colors.dart';
 
 // Conditionally import window_manager only if available
 import 'package:window_manager/window_manager.dart'
@@ -54,12 +55,23 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'CineNest',
       theme: ThemeData(
-        // Add a dark theme to match your app's aesthetic
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: Color(0xFF0A0E1A),
-        primaryColor: Color(0xFFE6B17A),
+        scaffoldBackgroundColor: AppColors.background,
+        primaryColor: AppColors.accent,
+        // Add custom color scheme
+        colorScheme: ColorScheme.dark(
+          primary: AppColors.accent,
+          secondary: AppColors.accent,
+          background: AppColors.background,
+          surface: AppColors.cardBackground,
+        ),
+        // Custom app bar theme
+        appBarTheme: AppBarTheme(
+          backgroundColor: AppColors.background,
+          elevation: 0,
+        ),
       ),
-      debugShowCheckedModeBanner: false, // Remove debug banner
+      debugShowCheckedModeBanner: false,
       initialRoute: '/home',
       onGenerateRoute: (settings) {
         // Custom route transitions for better performance
@@ -70,8 +82,6 @@ class MyApp extends StatelessWidget {
             return _createRoute(WatchlistScreen(), settings);
           case '/ratings':
             return _createRoute(RatingsScreen(), settings);
-          case '/search':
-            return _createRoute(SearchDiscoverScreen(), settings);
           default:
             return _createRoute(HomeScreen(), settings);
         }
@@ -85,11 +95,10 @@ class MyApp extends StatelessWidget {
     return PageRouteBuilder(
       settings: settings,
       pageBuilder: (context, animation, secondaryAnimation) => page,
-      transitionDuration: Duration(milliseconds: 300), // Faster transition
+      transitionDuration: Duration(milliseconds: 300),
       reverseTransitionDuration: Duration(milliseconds: 250),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        // Use a simple fade transition instead of the default slide
-        // This reduces the workload during navigation
+        // Use a simple fade transition for better performance
         return FadeTransition(
           opacity: CurvedAnimation(
             parent: animation,

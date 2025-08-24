@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'dart:io' show Platform;
 
 // Updated imports with new structure
-import 'package:cine_nest/UI/screens/home/HomeScreen.dart';
-import 'package:cine_nest/UI/screens/watchlist/WatchList.dart';
-import 'package:cine_nest/UI/screens/ratings/RatingsScreen.dart';
+import 'package:cine_nest/UI/screens/home/home_screen.dart';
+import 'package:cine_nest/UI/screens/watchlist/watchlist_screen.dart';
+import 'package:cine_nest/UI/screens/ratings/ratings_screen.dart';
 import 'package:cine_nest/core/constants/colors.dart';
 
 // Conditionally import window_manager only if available

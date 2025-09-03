@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../core/utils/responsive.dart';
@@ -44,33 +45,65 @@ class MovieCard extends StatelessWidget {
                   color: AppColors.cardBorder,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                 ),
-                child: Stack(
-                  children: [
-                    Center(
-                      child: Icon(
-                        movie.type == ContentType.movie ? Icons.movie : Icons.tv,
-                        color: AppColors.textSecondary.withOpacity(0.5),
-                        size: 32,
-                      ),
-                    ),
-                    if (movie.isInWatchlist)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: AppColors.accent,
-                            borderRadius: BorderRadius.circular(8),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  child: Stack(
+                    children: [
+                      // Movie poster image
+                      if (movie.posterUrl != null)
+                        Positioned.fill(
+                          child: CachedNetworkImage(
+                            imageUrl: movie.posterUrl!,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(
+                              color: AppColors.cardBorder,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: AppColors.accent,
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              color: AppColors.cardBorder,
+                              child: Center(
+                                child: Icon(
+                                  movie.type == ContentType.movie ? Icons.movie : Icons.tv,
+                                  color: AppColors.textSecondary.withOpacity(0.5),
+                                  size: 32,
+                                ),
+                              ),
+                            ),
                           ),
+                        )
+                      else
+                        Center(
                           child: Icon(
-                            Icons.bookmark,
-                            color: AppColors.background,
-                            size: 16,
+                            movie.type == ContentType.movie ? Icons.movie : Icons.tv,
+                            color: AppColors.textSecondary.withOpacity(0.5),
+                            size: 32,
                           ),
                         ),
-                      ),
-                  ],
+                      // Watchlist badge
+                      if (movie.isInWatchlist)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            padding: EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.accent,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.bookmark,
+                              color: AppColors.background,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),

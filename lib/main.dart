@@ -1,12 +1,17 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-// Conditional import for window_manager (only on desktop platforms)
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:io' show Platform;
 
+// Dependency injection
+import 'package:cine_nest/core/di/injection_container.dart' as di;
+
 // Updated imports with new structure
-import 'package:cine_nest/UI/screens/home/HomeScreen.dart';
-import 'package:cine_nest/UI/screens/watchlist/WatchList.dart';
-import 'package:cine_nest/UI/screens/ratings/RatingsScreen.dart';
+import 'package:cine_nest/UI/screens/home/home_screen.dart';
+import 'package:cine_nest/UI/screens/watchlist/watchlist_screen.dart';
+import 'package:cine_nest/UI/screens/ratings/ratings_screen.dart';
+import 'package:cine_nest/UI/screens/api_test_screen.dart';
 import 'package:cine_nest/core/constants/colors.dart';
 
 // Conditionally import window_manager only if available
@@ -16,6 +21,12 @@ if (dart.library.html) 'package:cine_nest/stubs/window_manager_stub.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
+
+  // Initialize dependency injection
+  await di.init();
+
   // Only configure window manager on desktop platforms (not web)
   if (!kIsWeb) {
     try {
@@ -24,9 +35,9 @@ void main() async {
         await windowManager.ensureInitialized();
 
         WindowOptions windowOptions = WindowOptions(
-          size: Size(1200, 800),        // Default size
-          minimumSize: Size(800, 600),  // Minimum window size
-          maximumSize: Size(2560, 1440), // Maximum window size
+          size: Size(1200, 800),
+          minimumSize: Size(800, 600),
+          maximumSize: Size(2560, 1440),
           center: true,
           backgroundColor: Colors.transparent,
           skipTaskbar: false,
@@ -44,7 +55,11 @@ void main() async {
     }
   }
 
-  runApp(const MyApp());
+  runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -58,14 +73,12 @@ class MyApp extends StatelessWidget {
         brightness: Brightness.dark,
         scaffoldBackgroundColor: AppColors.background,
         primaryColor: AppColors.accent,
-        // Add custom color scheme
         colorScheme: ColorScheme.dark(
           primary: AppColors.accent,
           secondary: AppColors.accent,
           background: AppColors.background,
           surface: AppColors.cardBackground,
         ),
-        // Custom app bar theme
         appBarTheme: AppBarTheme(
           backgroundColor: AppColors.background,
           elevation: 0,
@@ -82,6 +95,8 @@ class MyApp extends StatelessWidget {
             return _createRoute(WatchlistScreen(), settings);
           case '/ratings':
             return _createRoute(RatingsScreen(), settings);
+          case '/test':
+            return _createRoute(ApiTestScreen(), settings);
           default:
             return _createRoute(HomeScreen(), settings);
         }

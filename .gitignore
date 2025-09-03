@@ -11,6 +11,10 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+.env
+.env.local
+.env.production
+.env.development
 
 # IntelliJ related
 *.iml
@@ -43,3 +47,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+
+# API Keys and Secrets
+**/api_keys.dart
+**/secrets.dart

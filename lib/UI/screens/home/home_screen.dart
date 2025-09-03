@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../data/datasources/remote_data_source_impl.dart';
 import '../../../data/models/movie.dart';
 import '../../../data/models/genre.dart';
+import '../../../providers/movie_provider.dart';
 import '../../widgets/cards/genre_card.dart';
 import '../../widgets/cards/movie_card.dart';
 import '../../widgets/dialogs/movie_details_sheet.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late AnimationController _slideController;
   late AnimationController _searchController;
@@ -30,125 +34,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   String searchQuery = '';
   String selectedGenre = 'All';
   List<Movie> searchResults = [];
-
-  // Cache for better performance
-  List<Movie>? _filteredMovies;
-  String? _lastSearchQuery;
-  String? _lastGenre;
-
-  // Sample movie data
-  final List<Movie> allMovies = [
-    Movie(
-      id: '1',
-      title: 'Dune: Part Two',
-      year: 2024,
-      genre: 'Sci-Fi',
-      rating: 8.9,
-      type: ContentType.movie,
-      duration: '166 min',
-      isInWatchlist: false,
-      synopsis: 'Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family.',
-    ),
-    Movie(
-      id: '2',
-      title: 'Shogun',
-      year: 2024,
-      genre: 'Drama',
-      rating: 9.1,
-      type: ContentType.tvShow,
-      duration: 'TV Series',
-      isInWatchlist: false,
-      synopsis: 'An epic saga of political intrigue, cultural clash, and forbidden love set in feudal Japan.',
-    ),
-    Movie(
-      id: '3',
-      title: 'John Wick',
-      year: 2014,
-      genre: 'Action',
-      rating: 7.4,
-      type: ContentType.movie,
-      duration: '101 min',
-      isInWatchlist: false,
-      synopsis: 'An ex-hitman comes out of retirement to track down the gangsters that killed his dog.',
-    ),
-    Movie(
-      id: '4',
-      title: 'The Office',
-      year: 2005,
-      genre: 'Comedy',
-      rating: 9.0,
-      type: ContentType.tvShow,
-      duration: 'TV Series',
-      isInWatchlist: true,
-      synopsis: 'A mockumentary on a group of typical office workers.',
-    ),
-    Movie(
-      id: '5',
-      title: 'The Conjuring',
-      year: 2013,
-      genre: 'Horror',
-      rating: 7.5,
-      type: ContentType.movie,
-      duration: '112 min',
-      isInWatchlist: false,
-      synopsis: 'Paranormal investigators work to help a family terrorized by a dark presence.',
-    ),
-    Movie(
-      id: '6',
-      title: 'The Notebook',
-      year: 2004,
-      genre: 'Romance',
-      rating: 7.8,
-      type: ContentType.movie,
-      duration: '123 min',
-      isInWatchlist: false,
-      synopsis: 'A poor yet passionate young man falls in love with a rich young woman.',
-    ),
-    Movie(
-      id: '7',
-      title: 'Breaking Bad',
-      year: 2008,
-      genre: 'Crime',
-      rating: 9.5,
-      type: ContentType.tvShow,
-      duration: 'TV Series',
-      isInWatchlist: true,
-      synopsis: 'A high school chemistry teacher turned methamphetamine producer.',
-    ),
-    Movie(
-      id: '8',
-      title: 'Inception',
-      year: 2010,
-      genre: 'Thriller',
-      rating: 8.8,
-      type: ContentType.movie,
-      duration: '148 min',
-      isInWatchlist: false,
-      synopsis: 'A thief who steals corporate secrets through dream-sharing technology.',
-    ),
-    Movie(
-      id: '9',
-      title: 'Interstellar',
-      year: 2014,
-      genre: 'Sci-Fi',
-      rating: 8.6,
-      type: ContentType.movie,
-      duration: '169 min',
-      isInWatchlist: false,
-      synopsis: 'A team of explorers travel through a wormhole in space to ensure humanity\'s survival.',
-    ),
-    Movie(
-      id: '10',
-      title: 'The Dark Knight',
-      year: 2008,
-      genre: 'Action',
-      rating: 9.0,
-      type: ContentType.movie,
-      duration: '152 min',
-      isInWatchlist: true,
-      synopsis: 'When the menace known as the Joker wreaks havoc on Gotham.',
-    ),
-  ];
+  bool _isSearching = false;
 
   @override
   void initState() {
@@ -210,7 +96,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void _toggleSearch() {
     if (isSearchActive) {
       _searchFocusNode.unfocus();
-
       _searchController.reverse().then((_) {
         if (mounted) {
           setState(() {
@@ -218,7 +103,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             _searchTextController.clear();
             searchResults.clear();
             selectedGenre = 'All';
-            _filteredMovies = null;
           });
         }
       });
@@ -226,47 +110,64 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       setState(() {
         isSearchActive = true;
       });
-
       _searchController.forward();
-
       Future.delayed(Duration(milliseconds: 250), () {
         if (mounted && isSearchActive) {
           _searchFocusNode.requestFocus();
         }
       });
-      _performSearch(_searchTextController.text);
     }
   }
 
-  void _performSearch(String query) {
-    if (_lastSearchQuery == query && _lastGenre == selectedGenre && _filteredMovies != null) {
+  Future<void> _performSearch(String query) async {
+    if (query.isEmpty) {
       setState(() {
-        searchResults = _filteredMovies!;
+        searchResults = [];
+        _isSearching = false;
       });
       return;
     }
 
     setState(() {
-      _lastSearchQuery = query;
-      _lastGenre = selectedGenre;
-      _filteredMovies = allMovies.where((movie) {
-        final matchesQuery = query.isEmpty ||
-            movie.title.toLowerCase().contains(query.toLowerCase());
-        final matchesGenre = selectedGenre == 'All' || movie.genre == selectedGenre;
-        return matchesQuery && matchesGenre;
-      }).toList();
-      searchResults = _filteredMovies!;
+      _isSearching = true;
     });
+
+    final repository = ref.read(movieRepositoryProvider);
+    final result = await repository.searchMulti(query: query);
+
+    result.fold(
+          (failure) {
+        setState(() {
+          _isSearching = false;
+          searchResults = [];
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Search failed: ${failure.message}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      },
+          (movies) {
+        setState(() {
+          _isSearching = false;
+          searchResults = selectedGenre == 'All'
+              ? movies
+              : movies.where((m) => m.genre.contains(selectedGenre)).toList();
+        });
+      },
+    );
   }
 
   void _selectGenre(String genre) {
     if (selectedGenre == genre) return;
-
     setState(() {
       selectedGenre = genre;
-      _filteredMovies = null;
+      if (_searchTextController.text.isNotEmpty) {
+        // Re-filter search results
+        _performSearch(_searchTextController.text);
+      }
     });
-    _performSearch(_searchTextController.text);
   }
 
   void _showMovieDetails(Movie movie) {
@@ -279,9 +180,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       builder: (context) => MovieDetailsSheet(
         movie: movie,
         onAddToWatchlist: () {
-          setState(() {
-            movie = movie.copyWith(isInWatchlist: !movie.isInWatchlist);
-          });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Added to watchlist'),
@@ -301,10 +199,31 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  // Helper function to get best image URL with proper backdrop support
+  String? _getBestImageUrl(Movie movie, {bool preferBackdrop = false}) {
+    // Check if movie is the enhanced MovieWithImages type
+    if (movie is MovieWithImages) {
+      return movie.getBestImageUrl(preferBackdrop: preferBackdrop);
+    }
+
+    // Fallback for regular Movie objects
+    return movie.posterUrl;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final trendingMovies = ref.watch(trendingMoviesProvider);
+    final popularMovies = ref.watch(popularMoviesProvider);
+    final popularTVShows = ref.watch(popularTVShowsProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.pushNamed(context, '/test'),
+        backgroundColor: AppColors.accent,
+        child: Icon(Icons.bug_report, color: AppColors.background),
+        tooltip: 'Test API',
+      ),
       body: SafeArea(
         child: Stack(
           children: [
@@ -322,15 +241,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           SliverToBoxAdapter(child: SizedBox(height: 20)),
                           if (!isSearchActive) _buildGenreCarousel(),
                           if (!isSearchActive) SliverToBoxAdapter(child: SizedBox(height: 16)),
-                          if (!isSearchActive) _buildFeaturedSection(),
+                          if (!isSearchActive) _buildFeaturedSection(trendingMovies),
                           if (!isSearchActive) SliverToBoxAdapter(child: SizedBox(height: 32)),
                           if (!isSearchActive) _buildQuickActions(),
                           if (!isSearchActive) SliverToBoxAdapter(child: SizedBox(height: 32)),
-                          if (!isSearchActive) _buildRecentlyWatched(),
+                          if (!isSearchActive) _buildMovieSection('Popular Movies', popularMovies),
                           if (!isSearchActive) SliverToBoxAdapter(child: SizedBox(height: 32)),
-                          if (!isSearchActive) _buildYourRatings(),
+                          if (!isSearchActive) _buildMovieSection('Popular TV Shows', popularTVShows),
                           if (!isSearchActive) SliverToBoxAdapter(child: SizedBox(height: 32)),
-                          if (!isSearchActive) _buildTrendingSection(),
+                          if (!isSearchActive) _buildTrendingSection(trendingMovies),
                           SliverToBoxAdapter(child: SizedBox(height: 100)),
                         ],
                       ),
@@ -398,11 +317,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ],
             ),
 
-          if (isSearchActive)
-            SizedBox(width: 16),
-
-          if (!isSearchActive)
-            Expanded(child: SizedBox()),
+          if (isSearchActive) SizedBox(width: 16),
+          if (!isSearchActive) Expanded(child: SizedBox()),
 
           if (isSearchActive)
             Expanded(
@@ -591,13 +507,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildSearchResults() {
-    final results = searchResults.isNotEmpty || _searchTextController.text.isNotEmpty
-        ? searchResults
-        : (selectedGenre == 'All'
-        ? allMovies
-        : allMovies.where((movie) => movie.genre == selectedGenre).toList());
+    if (_isSearching) {
+      return Center(
+        child: CircularProgressIndicator(color: AppColors.accent),
+      );
+    }
 
-    if (results.isEmpty) {
+    if (searchResults.isEmpty && _searchTextController.text.isNotEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -631,18 +547,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             mainAxisSpacing: 20,
             childAspectRatio: 0.65,
           ),
-          itemCount: results.length,
+          itemCount: searchResults.length,
           itemBuilder: (context, index) {
-            return MovieCard(
-              movie: results[index],
-              onTap: () {
-                setState(() {
-                  results[index] = results[index].copyWith(
-                    isInWatchlist: !results[index].isInWatchlist,
-                  );
-                });
-              },
-              onLongPress: () => _showMovieDetails(results[index]),
+            return MovieCardWithImage(
+              movie: searchResults[index],
+              onTap: () => _showMovieDetails(searchResults[index]),
             );
           },
         );
@@ -650,130 +559,170 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildFeaturedSection() {
+  Widget _buildFeaturedSection(AsyncValue<List<Movie>> trendingMovies) {
     return SliverToBoxAdapter(
       child: Container(
         height: 240,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            double viewportFraction;
-            if (constraints.maxWidth > 1200) {
-              viewportFraction = 0.4;
-            } else if (constraints.maxWidth > 800) {
-              viewportFraction = 0.6;
-            } else {
-              viewportFraction = 0.85;
-            }
+        child: trendingMovies.when(
+          data: (movies) {
+            if (movies.isEmpty) return SizedBox();
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                double viewportFraction;
+                if (constraints.maxWidth > 1200) {
+                  viewportFraction = 0.4;
+                } else if (constraints.maxWidth > 800) {
+                  viewportFraction = 0.6;
+                } else {
+                  viewportFraction = 0.85;
+                }
 
-            return PageView.builder(
-              controller: PageController(
-                viewportFraction: viewportFraction,
-                initialPage: 1000,
-              ),
-              physics: const BouncingScrollPhysics(),
-              scrollBehavior: MaterialScrollBehavior().copyWith(
-                dragDevices: {
-                  PointerDeviceKind.touch,
-                  PointerDeviceKind.mouse,
-                },
-              ),
-              itemBuilder: (context, index) {
-                final actualIndex = index % 3;
-                return Container(
-                  margin: EdgeInsets.symmetric(horizontal: 8),
-                  child: _buildFeaturedCard(actualIndex),
+                return PageView.builder(
+                  controller: PageController(
+                    viewportFraction: viewportFraction,
+                    initialPage: 0,
+                  ),
+                  physics: const BouncingScrollPhysics(),
+                  scrollBehavior: MaterialScrollBehavior().copyWith(
+                    dragDevices: {
+                      PointerDeviceKind.touch,
+                      PointerDeviceKind.mouse,
+                    },
+                  ),
+                  itemCount: movies.length > 5 ? 5 : movies.length,
+                  itemBuilder: (context, index) {
+                    return Container(
+                      margin: EdgeInsets.symmetric(horizontal: 8),
+                      child: _buildFeaturedCard(movies[index]),
+                    );
+                  },
                 );
               },
             );
           },
+          loading: () => Center(child: CircularProgressIndicator(color: AppColors.accent)),
+          error: (error, stack) => Center(
+            child: Text('Failed to load', style: AppTextStyles.body),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildFeaturedCard(int index) {
-    final titles = ['Dune: Part Two', 'Oppenheimer', 'The Batman'];
-    final ratings = [8.9, 8.7, 8.1];
-
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.cardBorder,
-            AppColors.cardBackground,
-          ],
+  Widget _buildFeaturedCard(Movie movie) {
+    return GestureDetector(
+      onTap: () => _showMovieDetails(movie),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.cardBorder,
+              AppColors.cardBackground,
+            ],
+          ),
+          border: Border.all(color: AppColors.cardBorderLight, width: 1),
         ),
-        border: Border.all(color: AppColors.cardBorderLight, width: 1),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          children: [
-            Container(
-              width: double.infinity,
-              height: double.infinity,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.7),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Stack(
+            children: [
+              // Background image - prefer landscape/backdrop format
+              if (movie.posterUrl != null)
+                Positioned.fill(
+                  child: CachedNetworkImage(
+                    imageUrl: _getBestImageUrl(movie, preferBackdrop: true) ?? movie.posterUrl!,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      color: AppColors.cardBorder,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.accent,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: AppColors.cardBorder,
+                      child: Icon(
+                        movie.type == ContentType.movie ? Icons.movie : Icons.tv,
+                        color: AppColors.textSecondary.withOpacity(0.5),
+                        size: 40,
+                      ),
+                    ),
+                  ),
+                ),
+              Container(
+                width: double.infinity,
+                height: double.infinity,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.8),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 20,
+                left: 20,
+                right: 20,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.accent, width: 1),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.star, color: AppColors.accent, size: 16),
+                          SizedBox(width: 4),
+                          Text(
+                            '${movie.rating.toStringAsFixed(1)}',
+                            style: TextStyle(
+                              color: AppColors.accent,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    // Fixed height for title to prevent card size variation
+                    Container(
+                      height: 56, // Fixed height for 2 lines of text
+                      child: Text(
+                        movie.title,
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      '${movie.year} • ${movie.genre}',
+                      style: AppTextStyles.label,
+                    ),
                   ],
                 ),
               ),
-            ),
-            Positioned(
-              bottom: 20,
-              left: 20,
-              right: 20,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.accent.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.accent, width: 1),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.star, color: AppColors.accent, size: 16),
-                        SizedBox(width: 4),
-                        Text(
-                          '${ratings[index]}',
-                          style: TextStyle(
-                            color: AppColors.accent,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  Text(
-                    titles[index],
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Tap to add to watchlist',
-                    style: AppTextStyles.label,
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -871,7 +820,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildRecentlyWatched() {
+  Widget _buildMovieSection(String title, AsyncValue<List<Movie>> moviesProvider) {
     return SliverToBoxAdapter(
       child: Column(
         children: [
@@ -881,7 +830,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Recently Watched',
+                  title,
                   style: AppTextStyles.h2,
                 ),
                 Text(
@@ -895,15 +844,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           SizedBox(height: 16),
           Container(
-            height: 200,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              physics: const BouncingScrollPhysics(),
-              itemCount: 5,
-              itemBuilder: (context, index) {
-                return _buildMovieCardCompact(allMovies[index]);
+            height: 220, // Fixed height for consistent cards
+            child: moviesProvider.when(
+              data: (movies) {
+                if (movies.isEmpty) return SizedBox();
+                return ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: movies.length > 10 ? 10 : movies.length,
+                  itemBuilder: (context, index) {
+                    return _buildMovieCardCompact(movies[index]);
+                  },
+                );
               },
+              loading: () => Center(child: CircularProgressIndicator(color: AppColors.accent)),
+              error: (error, stack) => Center(
+                child: Text('Failed to load', style: AppTextStyles.body),
+              ),
             ),
           ),
         ],
@@ -911,47 +869,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildYourRatings() {
-    return SliverToBoxAdapter(
-      child: Column(
-        children: [
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Your Top Rated',
-                  style: AppTextStyles.h2,
-                ),
-                Text(
-                  'View All',
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    color: AppColors.accent,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 16),
-          Container(
-            height: 200,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              physics: const BouncingScrollPhysics(),
-              itemCount: 5,
-              itemBuilder: (context, index) {
-                return _buildMovieCardCompact(allMovies[index]);
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTrendingSection() {
+  Widget _buildTrendingSection(AsyncValue<List<Movie>> trendingMovies) {
     return SliverToBoxAdapter(
       child: Column(
         children: [
@@ -975,15 +893,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           SizedBox(height: 16),
           Container(
-            height: 200,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              physics: const BouncingScrollPhysics(),
-              itemCount: 5,
-              itemBuilder: (context, index) {
-                return _buildMovieCardCompact(allMovies[index]);
+            height: 220, // Fixed height for consistent cards
+            child: trendingMovies.when(
+              data: (movies) {
+                if (movies.isEmpty) return SizedBox();
+                return ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: movies.length > 10 ? 10 : movies.length,
+                  itemBuilder: (context, index) {
+                    return _buildMovieCardCompact(movies[index]);
+                  },
+                );
               },
+              loading: () => Center(child: CircularProgressIndicator(color: AppColors.accent)),
+              error: (error, stack) => Center(
+                child: Text('Failed to load', style: AppTextStyles.body),
+              ),
             ),
           ),
         ],
@@ -993,7 +920,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildMovieCardCompact(Movie movie) {
     return GestureDetector(
-      onLongPress: () => _showMovieDetails(movie),
+      onTap: () => _showMovieDetails(movie),
       child: Container(
         width: 120,
         margin: EdgeInsets.only(right: 16),
@@ -1009,34 +936,217 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: Container(
+                  child: movie.posterUrl != null
+                      ? CachedNetworkImage(
+                    imageUrl: movie.posterUrl!,
+                    fit: BoxFit.cover,
                     width: double.infinity,
                     height: double.infinity,
+                    placeholder: (context, url) => Container(
+                      color: AppColors.cardBorder,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.accent,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: AppColors.cardBorder,
+                      child: Icon(
+                        movie.type == ContentType.movie ? Icons.movie : Icons.tv,
+                        color: AppColors.textSecondary.withOpacity(0.5),
+                        size: 24,
+                      ),
+                    ),
+                  )
+                      : Container(
                     color: AppColors.cardBorder,
+                    child: Icon(
+                      movie.type == ContentType.movie ? Icons.movie : Icons.tv,
+                      color: AppColors.textSecondary.withOpacity(0.5),
+                      size: 24,
+                    ),
                   ),
                 ),
               ),
             ),
             SizedBox(height: 8),
-            Text(
-              movie.title,
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+            // Fixed height container for title to prevent size variation
+            Container(
+              height: 36, // Fixed height for 2 lines of text
+              child: Text(
+                movie.title,
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
-            SizedBox(height: 2),
-            Text(
-              '${movie.year} • ${movie.genre}',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
+            SizedBox(height: 4),
+            // Fixed height container for subtitle
+            Container(
+              height: 16,
+              child: Text(
+                '${movie.year} • ${movie.genre}',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Updated MovieCardWithImage with consistent heights
+class MovieCardWithImage extends StatelessWidget {
+  final Movie movie;
+  final VoidCallback? onTap;
+
+  const MovieCardWithImage({
+    Key? key,
+    required this.movie,
+    this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.cardBorder, width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 3,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppColors.cardBorder,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  child: movie.posterUrl != null
+                      ? CachedNetworkImage(
+                    imageUrl: movie.posterUrl!,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      color: AppColors.cardBorder,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.accent,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: AppColors.cardBorder,
+                      child: Icon(
+                        movie.type == ContentType.movie ? Icons.movie : Icons.tv,
+                        color: AppColors.textSecondary.withOpacity(0.5),
+                        size: 32,
+                      ),
+                    ),
+                  )
+                      : Container(
+                    color: AppColors.cardBorder,
+                    child: Icon(
+                      movie.type == ContentType.movie ? Icons.movie : Icons.tv,
+                      color: AppColors.textSecondary.withOpacity(0.5),
+                      size: 32,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Container(
+              height: 110, // Fixed height for the bottom section
+              padding: EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Fixed height container for title
+                  Container(
+                    height: 36, // Fixed height for 2 lines of text
+                    child: Text(
+                      movie.title,
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  SizedBox(height: 6),
+                  // Fixed height container for subtitle
+                  Container(
+                    height: 16,
+                    child: Text(
+                      '${movie.year} • ${movie.genre}',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        height: 1.1,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Spacer(),
+                  // Rating row with fixed height
+                  Container(
+                    height: 20,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(Icons.star,
+                            color: AppColors.accent,
+                            size: 14),
+                        SizedBox(width: 4),
+                        Text(
+                          '${movie.rating.toStringAsFixed(1)}',
+                          style: TextStyle(
+                            color: AppColors.accent,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Spacer(),
+                        Flexible(
+                          child: Text(
+                            movie.duration,
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 11,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

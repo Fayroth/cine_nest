@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../data/datasources/remote_data_source_impl.dart';
 import '../../../data/models/movie.dart';
 import '../../../data/models/genre.dart';
 import '../../../providers/movie_provider.dart';
@@ -196,6 +197,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
         },
       ),
     );
+  }
+
+  // Helper function to get best image URL with proper backdrop support
+  String? _getBestImageUrl(Movie movie, {bool preferBackdrop = false}) {
+    // Check if movie is the enhanced MovieWithImages type
+    if (movie is MovieWithImages) {
+      return movie.getBestImageUrl(preferBackdrop: preferBackdrop);
+    }
+
+    // Fallback for regular Movie objects
+    return movie.posterUrl;
   }
 
   @override
@@ -617,11 +629,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
           borderRadius: BorderRadius.circular(24),
           child: Stack(
             children: [
-              // Background image
+              // Background image - prefer landscape/backdrop format
               if (movie.posterUrl != null)
                 Positioned.fill(
                   child: CachedNetworkImage(
-                    imageUrl: movie.posterUrl!,
+                    imageUrl: _getBestImageUrl(movie, preferBackdrop: true) ?? movie.posterUrl!,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Container(
                       color: AppColors.cardBorder,
@@ -687,15 +699,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
                       ),
                     ),
                     SizedBox(height: 12),
-                    Text(
-                      movie.title,
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
+                    // Fixed height for title to prevent card size variation
+                    Container(
+                      height: 56, // Fixed height for 2 lines of text
+                      child: Text(
+                        movie.title,
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: 8),
                     Text(
@@ -828,7 +844,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
           ),
           SizedBox(height: 16),
           Container(
-            height: 200,
+            height: 220, // Fixed height for consistent cards
             child: moviesProvider.when(
               data: (movies) {
                 if (movies.isEmpty) return SizedBox();
@@ -877,7 +893,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
           ),
           SizedBox(height: 16),
           Container(
-            height: 200,
+            height: 220, // Fixed height for consistent cards
             child: trendingMovies.when(
               data: (movies) {
                 if (movies.isEmpty) return SizedBox();
@@ -956,25 +972,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
               ),
             ),
             SizedBox(height: 8),
-            Text(
-              movie.title,
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+            // Fixed height container for title to prevent size variation
+            Container(
+              height: 36, // Fixed height for 2 lines of text
+              child: Text(
+                movie.title,
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
-            SizedBox(height: 2),
-            Text(
-              '${movie.year} • ${movie.genre}',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
+            SizedBox(height: 4),
+            // Fixed height container for subtitle
+            Container(
+              height: 16,
+              child: Text(
+                '${movie.year} • ${movie.genre}',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -983,7 +1007,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
   }
 }
 
-// New widget for movie cards with images
+// Updated MovieCardWithImage with consistent heights
 class MovieCardWithImage extends StatelessWidget {
   final Movie movie;
   final VoidCallback? onTap;
@@ -1050,15 +1074,16 @@ class MovieCardWithImage extends StatelessWidget {
                 ),
               ),
             ),
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
+            Container(
+              height: 110, // Fixed height for the bottom section
+              padding: EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Fixed height container for title
+                  Container(
+                    height: 36, // Fixed height for 2 lines of text
+                    child: Text(
                       movie.title,
                       style: TextStyle(
                         color: AppColors.textPrimary,
@@ -1069,8 +1094,12 @@ class MovieCardWithImage extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: 6),
-                    Text(
+                  ),
+                  SizedBox(height: 6),
+                  // Fixed height container for subtitle
+                  Container(
+                    height: 16,
+                    child: Text(
                       '${movie.year} • ${movie.genre}',
                       style: TextStyle(
                         color: AppColors.textSecondary,
@@ -1080,8 +1109,12 @@ class MovieCardWithImage extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    Spacer(),
-                    Row(
+                  ),
+                  Spacer(),
+                  // Rating row with fixed height
+                  Container(
+                    height: 20,
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Icon(Icons.star,
@@ -1111,8 +1144,8 @@ class MovieCardWithImage extends StatelessWidget {
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],

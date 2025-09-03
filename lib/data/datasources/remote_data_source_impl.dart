@@ -115,7 +115,7 @@ class RemoteDataSourceImpl implements RemoteDataSource {
     }
   }
 
-  // Helper method to parse movie from JSON
+  // Enhanced helper method to parse movie from JSON with better image handling
   Movie _parseMovie(Map<String, dynamic> json, {ContentType? type}) {
     // Determine content type
     ContentType contentType = type ??
@@ -129,8 +129,6 @@ class RemoteDataSourceImpl implements RemoteDataSource {
     // Parse genres - TMDB returns genre_ids in list views
     String genreString = 'Unknown';
     if (json['genre_ids'] != null && (json['genre_ids'] as List).isNotEmpty) {
-      // You'd typically map these IDs to genre names
-      // For now, we'll use a simplified mapping
       genreString = _mapGenreIds(json['genre_ids'] as List);
     }
 
@@ -142,7 +140,8 @@ class RemoteDataSourceImpl implements RemoteDataSource {
       duration = 'TV Series';
     }
 
-    return Movie(
+    // Create custom Movie object with both poster and backdrop URLs
+    return MovieWithImages(
       id: json['id'].toString(),
       title: contentType == ContentType.tvShow
           ? (json['name'] ?? json['original_name'] ?? 'Unknown')
@@ -159,6 +158,9 @@ class RemoteDataSourceImpl implements RemoteDataSource {
       synopsis: json['overview'],
       posterUrl: json['poster_path'] != null
           ? '${ApiConstants.imageBaseUrl}${ApiConstants.posterSize}${json['poster_path']}'
+          : null,
+      backdropUrl: json['backdrop_path'] != null
+          ? '${ApiConstants.imageBaseUrl}${ApiConstants.backdropSize}${json['backdrop_path']}'
           : null,
       isInWatchlist: false,
     );
@@ -189,7 +191,7 @@ class RemoteDataSourceImpl implements RemoteDataSource {
       }
     }
 
-    return Movie(
+    return MovieWithImages(
       id: json['id'].toString(),
       title: type == ContentType.tvShow
           ? (json['name'] ?? json['original_name'] ?? 'Unknown')
@@ -206,6 +208,9 @@ class RemoteDataSourceImpl implements RemoteDataSource {
       synopsis: json['overview'],
       posterUrl: json['poster_path'] != null
           ? '${ApiConstants.imageBaseUrl}${ApiConstants.posterSize}${json['poster_path']}'
+          : null,
+      backdropUrl: json['backdrop_path'] != null
+          ? '${ApiConstants.imageBaseUrl}${ApiConstants.backdropSize}${json['backdrop_path']}'
           : null,
       isInWatchlist: false,
     );
@@ -332,5 +337,88 @@ class RemoteDataSourceImpl implements RemoteDataSource {
   Future<List<Movie>> getTVShowRecommendations({required String tvShowId, int page = 1}) async {
     // Implement when needed
     throw UnimplementedError();
+  }
+}
+
+// Extended Movie class to include backdrop URL
+class MovieWithImages extends Movie {
+  final String? backdropUrl;
+
+  MovieWithImages({
+    required String id,
+    required String title,
+    required int year,
+    required String genre,
+    required double rating,
+    required ContentType type,
+    required String duration,
+    String? synopsis,
+    String? posterUrl,
+    this.backdropUrl,
+    bool isInWatchlist = false,
+    DateTime? dateAdded,
+    double? userRating,
+    String? review,
+    DateTime? dateRated,
+  }) : super(
+    id: id,
+    title: title,
+    year: year,
+    genre: genre,
+    rating: rating,
+    type: type,
+    duration: duration,
+    synopsis: synopsis,
+    posterUrl: posterUrl,
+    isInWatchlist: isInWatchlist,
+    dateAdded: dateAdded,
+    userRating: userRating,
+    review: review,
+    dateRated: dateRated,
+  );
+
+  // Helper method to get the best image for different contexts
+  String? getBestImageUrl({bool preferBackdrop = false}) {
+    if (preferBackdrop && backdropUrl != null) {
+      return backdropUrl;
+    }
+    return posterUrl ?? backdropUrl;
+  }
+
+  @override
+  MovieWithImages copyWith({
+    String? id,
+    String? title,
+    int? year,
+    String? genre,
+    double? rating,
+    ContentType? type,
+    String? synopsis,
+    String? posterUrl,
+    String? backdropUrl,
+    String? duration,
+    bool? isInWatchlist,
+    DateTime? dateAdded,
+    double? userRating,
+    String? review,
+    DateTime? dateRated,
+  }) {
+    return MovieWithImages(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      year: year ?? this.year,
+      genre: genre ?? this.genre,
+      rating: rating ?? this.rating,
+      type: type ?? this.type,
+      synopsis: synopsis ?? this.synopsis,
+      posterUrl: posterUrl ?? this.posterUrl,
+      backdropUrl: backdropUrl ?? this.backdropUrl,
+      duration: duration ?? this.duration,
+      isInWatchlist: isInWatchlist ?? this.isInWatchlist,
+      dateAdded: dateAdded ?? this.dateAdded,
+      userRating: userRating ?? this.userRating,
+      review: review ?? this.review,
+      dateRated: dateRated ?? this.dateRated,
+    );
   }
 }

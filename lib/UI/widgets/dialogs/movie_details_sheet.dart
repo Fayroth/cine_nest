@@ -5,12 +5,14 @@ import '../../../data/models/movie.dart';
 
 class MovieDetailsSheet extends StatelessWidget {
   final Movie movie;
+  final bool isInWatchlist;
   final VoidCallback? onAddToWatchlist;
   final VoidCallback? onMoreInfo;
 
   const MovieDetailsSheet({
     Key? key,
     required this.movie,
+    this.isInWatchlist = false,
     this.onAddToWatchlist,
     this.onMoreInfo,
   }) : super(key: key);
@@ -160,20 +162,27 @@ class MovieDetailsSheet extends StatelessWidget {
               child: Container(
                 padding: EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: AppColors.accent,
+                  color: isInWatchlist
+                      ? AppColors.cardBorder
+                      : AppColors.accent,
                   borderRadius: BorderRadius.circular(12),
+                  border: isInWatchlist
+                      ? Border.all(color: AppColors.accent, width: 1)
+                      : null,
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.bookmark_add,
-                        color: AppColors.background,
-                        size: 18),
+                    Icon(
+                      isInWatchlist ? Icons.bookmark_remove : Icons.bookmark_add,
+                      color: isInWatchlist ? AppColors.accent : AppColors.background,
+                      size: 18,
+                    ),
                     SizedBox(width: 6),
                     Text(
-                      'Watchlist',
+                      isInWatchlist ? 'Remove' : 'Watchlist',
                       style: AppTextStyles.button.copyWith(
-                        color: AppColors.background,
+                        color: isInWatchlist ? AppColors.accent : AppColors.background,
                         fontSize: 14,
                       ),
                     ),

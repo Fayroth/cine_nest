@@ -3,15 +3,21 @@ import '../data/models/movie.dart';
 import '../data/models/rating.dart';
 import '../data/repositories/rating_repository.dart';
 import '../core/di/injection_container.dart';
+import 'auth_provider.dart';
 
 // Rating repository provider
 final ratingRepositoryProvider = Provider<RatingRepository>((ref) {
   return sl<RatingRepository>();
 });
 
-// Ratings state provider
+// Ratings state provider — keyed on the current user's uid.
+// Riverpod recreates this provider (and its notifier) whenever the uid changes,
+// which clears the in-memory list and triggers a fresh Firestore fetch.
 final ratingsProvider = StateNotifierProvider<RatingsNotifier, AsyncValue<List<Movie>>>(
-      (ref) => RatingsNotifier(ref.watch(ratingRepositoryProvider)),
+  (ref) {
+    final uid = ref.watch(currentUserProvider)?.uid;
+    return RatingsNotifier(ref.watch(ratingRepositoryProvider), uid: uid);
+  },
 );
 
 // Rating sort provider
@@ -114,12 +120,20 @@ enum RatingFilter {
 
 class RatingsNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   final RatingRepository _repository;
+  final String? _uid;
 
-  RatingsNotifier(this._repository) : super(const AsyncValue.loading()) {
+  RatingsNotifier(this._repository, {required String? uid})
+      : _uid = uid,
+        super(const AsyncValue.loading()) {
     loadRatings();
   }
 
   Future<void> loadRatings() async {
+    // No user logged in — return empty list immediately, no Firestore call.
+    if (_uid == null) {
+      state = const AsyncValue.data([]);
+      return;
+    }
     try {
       state = const AsyncValue.loading();
       final result = await _repository.getRatedItems();

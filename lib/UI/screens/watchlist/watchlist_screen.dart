@@ -36,7 +36,8 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
+      CurvedAnimation(
+          parent: _animationController, curve: Curves.easeOutCubic),
     );
 
     _slideAnimation = Tween<Offset>(
@@ -109,7 +110,8 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Later', style: TextStyle(color: AppColors.textSecondary)),
+            child:
+                Text('Later', style: TextStyle(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () {
@@ -208,7 +210,7 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
   Widget _buildAppBar(List<Movie> filteredItems) {
     return CustomAppBar(
       title: 'My Watchlist',
-      subtitle: '${filteredItems.length} items to watch',
+      subtitle: '$count items to watch',
       trailing: GestureDetector(
         onTap: () => setState(() => isGridView = !isGridView),
         child: Container(
@@ -284,10 +286,31 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
                   ),
                 ],
               ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                  color: AppColors.accent.withValues(alpha: 0.3), width: 1),
             ),
-          );
-        },
-      ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildStatItem(
+                      '${items.length}', 'Total Items', Icons.bookmark),
+                ),
+                Container(width: 1, height: 40, color: AppColors.cardBorder),
+                Expanded(
+                  child: _buildStatItem(
+                      '${totalHours.toInt()}h', 'Watch Time', Icons.access_time),
+                ),
+                Container(width: 1, height: 40, color: AppColors.cardBorder),
+                Expanded(
+                  child: _buildStatItem(
+                      '$movieCount', 'Movies', Icons.movie),
+                ),
+              ],
+            ),
+          ),
+        );
+      }),
     );
   }
 
@@ -385,8 +408,43 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
               padding: EdgeInsets.symmetric(horizontal: 20),
               child: _buildListView(filteredItems),
             ),
+          ],
+        ),
+      ),
+      data: (movies) {
+        if (movies.isEmpty) {
+          return EmptyState(
+            icon: Icons.bookmark_outline,
+            title: 'Your watchlist is empty',
+            subtitle: 'Start adding movies and shows\nyou want to watch later',
+            buttonText: 'Explore Movies',
+            onButtonPressed: () => Navigator.pop(context),
           );
         }
+
+        return LayoutBuilder(builder: (context, constraints) {
+          if (isGridView) {
+            final screenWidth = constraints.maxWidth;
+            final maxWidth = screenWidth > 1400 ? 1400.0 : screenWidth;
+            return Center(
+              child: Container(
+                width: maxWidth,
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: _buildGridView(movies, screenWidth),
+              ),
+            );
+          } else {
+            final maxWidth =
+                constraints.maxWidth > 800 ? 800.0 : constraints.maxWidth;
+            return Center(
+              child: Container(
+                width: maxWidth,
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: _buildListView(movies),
+              ),
+            );
+          }
+        });
       },
     );
   }
@@ -409,14 +467,12 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
           movie: items[index],
           onLongPress: () => _showItemDetails(items[index]),
         );
-
         if (maxCardWidth != null) {
           card = ConstrainedBox(
             constraints: BoxConstraints(maxWidth: maxCardWidth),
             child: card,
           );
         }
-
         return card;
       },
     );

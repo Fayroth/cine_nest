@@ -10,6 +10,7 @@ import '../../../data/models/movie.dart';
 import '../../../data/models/genre.dart';
 import '../../../providers/movie_provider.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/watchlist_provider.dart';
 import '../../widgets/cards/genre_card.dart';
 import '../../widgets/cards/movie_card.dart';
 import '../../widgets/dialogs/movie_details_sheet.dart';
@@ -171,7 +172,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
     });
   }
 
+  Future<void> _toggleWatchlist(Movie movie, bool currentlyInWatchlist) async {
+    final notifier = ref.read(watchlistProvider.notifier);
+    final bool success;
+
+    if (currentlyInWatchlist) {
+      success = await notifier.removeFromWatchlist(movie.id);
+    } else {
+      success = await notifier.addToWatchlist(movie);
+    }
+
+    if (!mounted) return;
+
+    final message = !success
+        ? (currentlyInWatchlist ? 'Failed to remove from watchlist' : 'Failed to add to watchlist')
+        : (currentlyInWatchlist ? 'Removed from watchlist' : 'Added to watchlist');
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: success ? AppColors.cardBorder : AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
   void _showMovieDetails(Movie movie) {
+    final inWatchlist = ref.read(isInWatchlistProvider(movie.id));
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -180,19 +210,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
       enableDrag: true,
       builder: (context) => MovieDetailsSheet(
         movie: movie,
-        onAddToWatchlist: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Added to watchlist'),
-              backgroundColor: AppColors.cardBorder,
-              behavior: SnackBarBehavior.floating,
-              duration: Duration(seconds: 2),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          );
-        },
+        isInWatchlist: inWatchlist,
+        onAddToWatchlist: () => _toggleWatchlist(movie, inWatchlist),
         onMoreInfo: () {
           // TODO: Navigate to full movie details page
         },
@@ -1047,6 +1066,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
   }
 
   Widget _buildMovieCardCompact(Movie movie) {
+    final inWatchlist = ref.watch(isInWatchlistProvider(movie.id));
     return GestureDetector(
       onTap: () => _showMovieDetails(movie),
       child: Container(
@@ -1056,47 +1076,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.cardBorder,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.cardBorderLight, width: 1),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: movie.posterUrl != null
-                      ? CachedNetworkImage(
-                    imageUrl: movie.posterUrl!,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                    placeholder: (context, url) => Container(
+              child: Stack(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
                       color: AppColors.cardBorder,
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.accent,
-                          strokeWidth: 2,
-                        ),
-                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.cardBorderLight, width: 1),
                     ),
-                    errorWidget: (context, url, error) => Container(
-                      color: AppColors.cardBorder,
-                      child: Icon(
-                        movie.type == ContentType.movie ? Icons.movie : Icons.tv,
-                        color: AppColors.textSecondary.withOpacity(0.5),
-                        size: 24,
-                      ),
-                    ),
-                  )
-                      : Container(
-                    color: AppColors.cardBorder,
-                    child: Icon(
-                      movie.type == ContentType.movie ? Icons.movie : Icons.tv,
-                      color: AppColors.textSecondary.withOpacity(0.5),
-                      size: 24,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: movie.posterUrl != null
+                          ? CachedNetworkImage(
+                              imageUrl: movie.posterUrl!,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              placeholder: (context, url) => Container(
+                                color: AppColors.cardBorder,
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    color: AppColors.accent,
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                color: AppColors.cardBorder,
+                                child: Icon(
+                                  movie.type == ContentType.movie ? Icons.movie : Icons.tv,
+                                  color: AppColors.textSecondary.withOpacity(0.5),
+                                  size: 24,
+                                ),
+                              ),
+                            )
+                          : Container(
+                              color: AppColors.cardBorder,
+                              child: Icon(
+                                movie.type == ContentType.movie ? Icons.movie : Icons.tv,
+                                color: AppColors.textSecondary.withOpacity(0.5),
+                                size: 24,
+                              ),
+                            ),
                     ),
                   ),
-                ),
+                  // Watchlist badge
+                  if (inWatchlist)
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: Container(
+                        padding: EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: AppColors.accent,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(Icons.bookmark, color: AppColors.background, size: 12),
+                      ),
+                    ),
+                ],
               ),
             ),
             SizedBox(height: 8),

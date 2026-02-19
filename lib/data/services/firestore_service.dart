@@ -153,7 +153,6 @@ class FirestoreService {
         return Movie.fromJson(data);
       }).toList();
 
-      // Sort client-side by dateAdded descending
       movies.sort((a, b) =>
           (b.dateAdded ?? DateTime(0)).compareTo(a.dateAdded ?? DateTime(0)));
 

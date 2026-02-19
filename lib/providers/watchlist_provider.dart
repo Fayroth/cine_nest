@@ -67,8 +67,8 @@ class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
       final result = await _repository.getWatchlist();
 
       result.fold(
-            (failure) => state = AsyncValue.error(failure.message, StackTrace.current),
-            (movies) => state = AsyncValue.data(movies),
+        (failure) => state = AsyncValue.error(failure.message, StackTrace.current),
+        (movies) => state = AsyncValue.data(movies),
       );
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);

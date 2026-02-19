@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "993324616296",
+    "project_id": "cinenest-e738b",
+    "storage_bucket": "cinenest-e738b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:993324616296:android:b1faacd34244850b1889dd",
+        "android_client_info": {
+          "package_name": "com.example.cine_nest"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB50wibHlSccvPYHMtShu5IaVaVTz4uKaU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

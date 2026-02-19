@@ -1,108 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../data/models/movie.dart';
+import '../../../providers/watchlist_provider.dart';
 import '../../widgets/common/custom_app_bar.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/cards/movie_card.dart';
 import '../../widgets/cards/movie_list_item.dart';
 import '../../widgets/dialogs/watchlist_item_sheet.dart';
 
-class WatchlistScreen extends StatefulWidget {
+class WatchlistScreen extends ConsumerStatefulWidget {
   @override
   _WatchlistScreenState createState() => _WatchlistScreenState();
 }
 
-class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderStateMixin {
+class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
+    with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  String selectedFilter = 'All';
   bool isGridView = true;
 
   final List<String> filters = ['All', 'Movies', 'TV Shows', 'Recently Added'];
-
-  // Cache filtered items to avoid rebuilding
-  List<Movie>? _cachedFilteredItems;
-  String? _lastFilter;
-
-  // Sample watchlist data using Movie model
-  List<Movie> watchlistItems = [
-    Movie(
-      id: '1',
-      title: 'Dune: Part Two',
-      year: 2024,
-      genre: 'Sci-Fi',
-      duration: '166 min',
-      rating: 8.9,
-      type: ContentType.movie,
-      dateAdded: DateTime.now().subtract(Duration(days: 2)),
-      synopsis: 'Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family.',
-      isInWatchlist: true,
-    ),
-    Movie(
-      id: '2',
-      title: 'The Bear',
-      year: 2022,
-      genre: 'Comedy-Drama',
-      duration: 'TV Series',
-      rating: 8.7,
-      type: ContentType.tvShow,
-      dateAdded: DateTime.now().subtract(Duration(days: 7)),
-      synopsis: 'A young chef from the fine dining world returns to Chicago to run his family\'s sandwich shop.',
-      isInWatchlist: true,
-    ),
-    Movie(
-      id: '3',
-      title: 'Oppenheimer',
-      year: 2023,
-      genre: 'Biography',
-      duration: '180 min',
-      rating: 8.8,
-      type: ContentType.movie,
-      dateAdded: DateTime.now().subtract(Duration(days: 3)),
-      synopsis: 'The story of American scientist J. Robert Oppenheimer and his role in the development of the atomic bomb.',
-      isInWatchlist: true,
-    ),
-    Movie(
-      id: '4',
-      title: 'The Last of Us',
-      year: 2023,
-      genre: 'Drama',
-      duration: 'TV Series',
-      rating: 9.1,
-      type: ContentType.tvShow,
-      dateAdded: DateTime.now().subtract(Duration(days: 5)),
-      synopsis: 'In a post-apocalyptic world, a hardened survivor is hired to smuggle a 14-year-old girl out of an oppressive quarantine zone.',
-      isInWatchlist: true,
-    ),
-    Movie(
-      id: '5',
-      title: 'Everything Everywhere All at Once',
-      year: 2022,
-      genre: 'Sci-Fi',
-      duration: '139 min',
-      rating: 8.7,
-      type: ContentType.movie,
-      dateAdded: DateTime.now().subtract(Duration(days: 7)),
-      synopsis: 'An aging Chinese immigrant is swept up in an insane adventure where she alone can save the world.',
-      isInWatchlist: true,
-    ),
-    Movie(
-      id: '6',
-      title: 'The Menu',
-      year: 2022,
-      genre: 'Thriller',
-      duration: '107 min',
-      rating: 7.2,
-      type: ContentType.movie,
-      dateAdded: DateTime.now().subtract(Duration(days: 14)),
-      synopsis: 'A young couple travels to a remote island to eat at an exclusive restaurant where the chef has prepared a lavish menu.',
-      isInWatchlist: true,
-    ),
-  ];
 
   @override
   void initState() {
@@ -120,7 +42,8 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
     _slideAnimation = Tween<Offset>(
       begin: Offset(0, 0.1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic));
+    ).animate(
+        CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic));
 
     _animationController.forward();
   }
@@ -131,25 +54,17 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
     super.dispose();
   }
 
-  List<Movie> get filteredItems {
-    if (_lastFilter != selectedFilter || _cachedFilteredItems == null) {
-      _lastFilter = selectedFilter;
-
-      if (selectedFilter == 'All') {
-        _cachedFilteredItems = watchlistItems;
-      } else if (selectedFilter == 'Movies') {
-        _cachedFilteredItems = watchlistItems.where((item) => item.type == ContentType.movie).toList();
-      } else if (selectedFilter == 'TV Shows') {
-        _cachedFilteredItems = watchlistItems.where((item) => item.type == ContentType.tvShow).toList();
-      } else if (selectedFilter == 'Recently Added') {
-        _cachedFilteredItems = List.from(watchlistItems)
-          ..sort((a, b) => b.dateAdded!.compareTo(a.dateAdded!));
-      } else {
-        _cachedFilteredItems = watchlistItems;
-      }
+  WatchlistFilter _filterFromLabel(String label) {
+    switch (label) {
+      case 'Movies':
+        return WatchlistFilter.movies;
+      case 'TV Shows':
+        return WatchlistFilter.tvShows;
+      case 'Recently Added':
+        return WatchlistFilter.recentlyAdded;
+      default:
+        return WatchlistFilter.all;
     }
-
-    return _cachedFilteredItems!;
   }
 
   void _showItemDetails(Movie movie) {
@@ -161,12 +76,8 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
       enableDrag: true,
       builder: (context) => WatchlistItemSheet(
         movie: movie,
-        onMarkWatched: () {
-          _showWatchedDialog(movie);
-        },
-        onRemove: () {
-          _removeFromWatchlist(movie);
-        },
+        onMarkWatched: () => _markAsWatched(movie),
+        onRemove: () => _removeFromWatchlist(movie),
         onMoreInfo: () {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -184,16 +95,13 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
     );
   }
 
-  void _showWatchedDialog(Movie movie) {
+  void _markAsWatched(Movie movie) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.cardBackground,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Mark as Watched',
-          style: AppTextStyles.h3,
-        ),
+        title: Text('Mark as Watched', style: AppTextStyles.h3),
         content: Text(
           'Did you enjoy "${movie.title}"? You can rate it now!',
           style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
@@ -215,37 +123,44 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
     );
   }
 
-  void _removeFromWatchlist(Movie movie) {
-    final removedMovie = movie;
-    final removedIndex = watchlistItems.indexWhere((item) => item.id == movie.id);
+  Future<void> _removeFromWatchlist(Movie movie) async {
+    final notifier = ref.read(watchlistProvider.notifier);
+    final success = await notifier.removeFromWatchlist(movie.id);
 
-    setState(() {
-      watchlistItems.removeAt(removedIndex);
-      _cachedFilteredItems = null;
-    });
+    if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Removed from watchlist'),
-        backgroundColor: AppColors.cardBorder,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        action: SnackBarAction(
-          label: 'Undo',
-          textColor: AppColors.accent,
-          onPressed: () {
-            setState(() {
-              watchlistItems.insert(removedIndex, removedMovie);
-              _cachedFilteredItems = null;
-            });
-          },
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Removed from watchlist'),
+          backgroundColor: AppColors.cardBorder,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          action: SnackBarAction(
+            label: 'Undo',
+            textColor: AppColors.accent,
+            onPressed: () => notifier.addToWatchlist(movie),
+          ),
         ),
-      ),
-    );
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to remove from watchlist'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final filteredAsync = ref.watch(filteredWatchlistProvider);
+    final allAsync = ref.watch(watchlistProvider);
+    final selectedFilter = ref.watch(watchlistFilterProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -253,13 +168,36 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
           opacity: _fadeAnimation,
           child: SlideTransition(
             position: _slideAnimation,
-            child: Column(
-              children: [
-                _buildAppBar(),
-                _buildStats(),
-                _buildFilters(),
-                Expanded(child: _buildWatchlist()),
-              ],
+            child: filteredAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.error_outline, color: AppColors.error, size: 48),
+                    SizedBox(height: 12),
+                    Text('Failed to load watchlist',
+                        style: AppTextStyles.body.copyWith(color: AppColors.error)),
+                    SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () =>
+                          ref.read(watchlistProvider.notifier).loadWatchlist(),
+                      child: Text('Retry', style: TextStyle(color: AppColors.accent)),
+                    ),
+                  ],
+                ),
+              ),
+              data: (filteredItems) {
+                final allItems = allAsync.valueOrNull ?? [];
+                return Column(
+                  children: [
+                    _buildAppBar(filteredItems),
+                    _buildStats(allItems),
+                    _buildFilters(selectedFilter),
+                    Expanded(child: _buildWatchlist(filteredItems)),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -267,16 +205,12 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
     );
   }
 
-  Widget _buildAppBar() {
+  Widget _buildAppBar(List<Movie> filteredItems) {
     return CustomAppBar(
       title: 'My Watchlist',
       subtitle: '${filteredItems.length} items to watch',
       trailing: GestureDetector(
-        onTap: () {
-          setState(() {
-            isGridView = !isGridView;
-          });
-        },
+        onTap: () => setState(() => isGridView = !isGridView),
         child: Container(
           padding: EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -294,9 +228,11 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
     );
   }
 
-  Widget _buildStats() {
-    final movieCount = watchlistItems.where((item) => item.type == ContentType.movie).length;
-    final tvShowCount = watchlistItems.where((item) => item.type == ContentType.tvShow).length;
+  Widget _buildStats(List<Movie> allItems) {
+    final movieCount =
+        allItems.where((item) => item.type == ContentType.movie).length;
+    final tvShowCount =
+        allItems.where((item) => item.type == ContentType.tvShow).length;
     final totalHours = movieCount * 2.5 + tvShowCount * 10;
 
     return Padding(
@@ -304,7 +240,6 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
       child: LayoutBuilder(
         builder: (context, constraints) {
           double statsWidth;
-
           if (constraints.maxWidth < 400) {
             statsWidth = constraints.maxWidth * 0.95;
           } else if (constraints.maxWidth < 800) {
@@ -329,26 +264,21 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
                   ],
                 ),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.accent.withOpacity(0.3), width: 1),
+                border:
+                    Border.all(color: AppColors.accent.withOpacity(0.3), width: 1),
               ),
               child: Row(
                 children: [
                   Expanded(
-                    child: _buildStatItem('${watchlistItems.length}', 'Total Items', Icons.bookmark),
+                    child: _buildStatItem(
+                        '${allItems.length}', 'Total Items', Icons.bookmark),
                   ),
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: AppColors.cardBorder,
-                  ),
+                  Container(width: 1, height: 40, color: AppColors.cardBorder),
                   Expanded(
-                    child: _buildStatItem('${totalHours.toInt()}h', 'Watch Time', Icons.access_time),
+                    child: _buildStatItem(
+                        '${totalHours.toInt()}h', 'Watch Time', Icons.access_time),
                   ),
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: AppColors.cardBorder,
-                  ),
+                  Container(width: 1, height: 40, color: AppColors.cardBorder),
                   Expanded(
                     child: _buildStatItem('$movieCount', 'Movies', Icons.movie),
                   ),
@@ -374,29 +304,24 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
             fontWeight: FontWeight.w700,
           ),
         ),
-        Text(
-          label,
-          style: AppTextStyles.caption,
-        ),
+        Text(label, style: AppTextStyles.caption),
       ],
     );
   }
 
-  Widget _buildFilters() {
+  Widget _buildFilters(WatchlistFilter selectedFilter) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 20),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         padding: EdgeInsets.symmetric(horizontal: 20),
         child: Row(
-          children: filters.map((filter) {
+          children: filters.map((label) {
+            final filter = _filterFromLabel(label);
             final isSelected = selectedFilter == filter;
             return GestureDetector(
-              onTap: () {
-                setState(() {
-                  selectedFilter = filter;
-                });
-              },
+              onTap: () =>
+                  ref.read(watchlistFilterProvider.notifier).state = filter,
               child: Container(
                 margin: EdgeInsets.only(right: 12),
                 padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -409,9 +334,11 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
                   ),
                 ),
                 child: Text(
-                  filter,
+                  label,
                   style: TextStyle(
-                    color: isSelected ? AppColors.background : AppColors.textPrimary,
+                    color: isSelected
+                        ? AppColors.background
+                        : AppColors.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -424,7 +351,7 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
     );
   }
 
-  Widget _buildWatchlist() {
+  Widget _buildWatchlist(List<Movie> filteredItems) {
     if (filteredItems.isEmpty) {
       return EmptyState(
         icon: Icons.bookmark_outline,
@@ -445,17 +372,18 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
             child: Container(
               width: maxWidth,
               padding: EdgeInsets.symmetric(horizontal: 20),
-              child: _buildGridView(screenWidth),
+              child: _buildGridView(filteredItems, screenWidth),
             ),
           );
         } else {
-          final maxWidth = constraints.maxWidth > 800 ? 800.0 : constraints.maxWidth;
+          final maxWidth =
+              constraints.maxWidth > 800 ? 800.0 : constraints.maxWidth;
 
           return Center(
             child: Container(
               width: maxWidth,
               padding: EdgeInsets.symmetric(horizontal: 20),
-              child: _buildListView(),
+              child: _buildListView(filteredItems),
             ),
           );
         }
@@ -463,7 +391,7 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
     );
   }
 
-  Widget _buildGridView(double screenWidth) {
+  Widget _buildGridView(List<Movie> items, double screenWidth) {
     final columns = ResponsiveHelper.getGridColumns(screenWidth);
     final maxCardWidth = ResponsiveHelper.getMaxCardWidth(screenWidth);
 
@@ -475,11 +403,11 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
         mainAxisSpacing: 16,
         childAspectRatio: screenWidth < 500 ? 0.75 : 0.7,
       ),
-      itemCount: filteredItems.length,
+      itemCount: items.length,
       itemBuilder: (context, index) {
         Widget card = MovieCard(
-          movie: filteredItems[index],
-          onLongPress: () => _showItemDetails(filteredItems[index]),
+          movie: items[index],
+          onLongPress: () => _showItemDetails(items[index]),
         );
 
         if (maxCardWidth != null) {
@@ -494,14 +422,14 @@ class _WatchlistScreenState extends State<WatchlistScreen> with TickerProviderSt
     );
   }
 
-  Widget _buildListView() {
+  Widget _buildListView(List<Movie> items) {
     return ListView.builder(
       physics: BouncingScrollPhysics(),
-      itemCount: filteredItems.length,
+      itemCount: items.length,
       itemBuilder: (context, index) {
         return MovieListItem(
-          movie: filteredItems[index],
-          onLongPress: () => _showItemDetails(filteredItems[index]),
+          movie: items[index],
+          onLongPress: () => _showItemDetails(items[index]),
           showDateAdded: true,
         );
       },

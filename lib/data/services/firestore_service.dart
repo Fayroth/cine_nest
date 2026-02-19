@@ -111,11 +111,11 @@ class FirestoreService {
 
       await _watchlist(userId).doc(movie.id).set(watchlistItem);
 
-      // Update user stats
-      await _userDoc(userId).update({
-        'stats.watchlistCount': FieldValue.increment(1),
+      // Update user stats (merge so it works even if user doc doesn't exist yet)
+      await _userDoc(userId).set({
+        'stats': {'watchlistCount': FieldValue.increment(1)},
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
 
       return const Right(null);
     } catch (e) {
@@ -131,11 +131,11 @@ class FirestoreService {
     try {
       await _watchlist(userId).doc(movieId).delete();
 
-      // Update user stats
-      await _userDoc(userId).update({
-        'stats.watchlistCount': FieldValue.increment(-1),
+      // Update user stats (merge so it works even if user doc doesn't exist yet)
+      await _userDoc(userId).set({
+        'stats': {'watchlistCount': FieldValue.increment(-1)},
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
 
       return const Right(null);
     } catch (e) {
@@ -146,9 +146,7 @@ class FirestoreService {
   // Get watchlist
   Future<Either<Failure, List<Movie>>> getWatchlist(String userId) async {
     try {
-      final snapshot = await _watchlist(userId)
-          .orderBy('dateAdded', descending: true)
-          .get();
+      final snapshot = await _watchlist(userId).get();
 
       final movies = snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
@@ -164,7 +162,6 @@ class FirestoreService {
   // Stream watchlist (for real-time updates)
   Stream<List<Movie>> streamWatchlist(String userId) {
     return _watchlist(userId)
-        .orderBy('dateAdded', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) {
       final data = doc.data() as Map<String, dynamic>;
@@ -213,10 +210,10 @@ class FirestoreService {
         await docRef.set(ratingData);
 
         // Update user stats for new rating
-        await _userDoc(userId).update({
-          'stats.ratingsCount': FieldValue.increment(1),
+        await _userDoc(userId).set({
+          'stats': {'ratingsCount': FieldValue.increment(1)},
           'updatedAt': FieldValue.serverTimestamp(),
-        });
+        }, SetOptions(merge: true));
       }
 
       return const Right(null);
@@ -234,10 +231,10 @@ class FirestoreService {
       await _ratings(userId).doc(movieId).delete();
 
       // Update user stats
-      await _userDoc(userId).update({
-        'stats.ratingsCount': FieldValue.increment(-1),
+      await _userDoc(userId).set({
+        'stats': {'ratingsCount': FieldValue.increment(-1)},
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
 
       return const Right(null);
     } catch (e) {
@@ -248,9 +245,7 @@ class FirestoreService {
   // Get ratings
   Future<Either<Failure, List<Movie>>> getRatings(String userId) async {
     try {
-      final snapshot = await _ratings(userId)
-          .orderBy('dateRated', descending: true)
-          .get();
+      final snapshot = await _ratings(userId).get();
 
       final movies = snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
@@ -266,7 +261,6 @@ class FirestoreService {
   // Stream ratings (for real-time updates)
   Stream<List<Movie>> streamRatings(String userId) {
     return _ratings(userId)
-        .orderBy('dateRated', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) {
       final data = doc.data() as Map<String, dynamic>;

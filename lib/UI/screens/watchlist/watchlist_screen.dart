@@ -43,8 +43,8 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
     _slideAnimation = Tween<Offset>(
       begin: Offset(0, 0.1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-        parent: _animationController, curve: Curves.easeOutCubic));
+    ).animate(
+        CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic));
 
     _animationController.forward();
   }
@@ -53,6 +53,19 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
   void dispose() {
     _animationController.dispose();
     super.dispose();
+  }
+
+  WatchlistFilter _filterFromLabel(String label) {
+    switch (label) {
+      case 'Movies':
+        return WatchlistFilter.movies;
+      case 'TV Shows':
+        return WatchlistFilter.tvShows;
+      case 'Recently Added':
+        return WatchlistFilter.recentlyAdded;
+      default:
+        return WatchlistFilter.all;
+    }
   }
 
   void _showItemDetails(Movie movie) {
@@ -64,14 +77,26 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
       enableDrag: true,
       builder: (context) => WatchlistItemSheet(
         movie: movie,
-        onMarkWatched: () => _showWatchedDialog(movie),
+        onMarkWatched: () => _markAsWatched(movie),
         onRemove: () => _removeFromWatchlist(movie),
-        onMoreInfo: () {},
+        onMoreInfo: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Opening full details...'),
+              backgroundColor: AppColors.cardBorder,
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  void _showWatchedDialog(Movie movie) {
+  void _markAsWatched(Movie movie) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -106,21 +131,30 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(success ? 'Removed from watchlist' : 'Failed to remove'),
-        backgroundColor: success ? AppColors.cardBorder : AppColors.error,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        action: success
-            ? SnackBarAction(
-                label: 'Undo',
-                textColor: AppColors.accent,
-                onPressed: () => notifier.addToWatchlist(movie),
-              )
-            : null,
-      ),
-    );
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Removed from watchlist'),
+          backgroundColor: AppColors.cardBorder,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          action: SnackBarAction(
+            label: 'Undo',
+            textColor: AppColors.accent,
+            onPressed: () => notifier.addToWatchlist(movie),
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to remove from watchlist'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
   }
 
   @override
@@ -136,13 +170,36 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
           opacity: _fadeAnimation,
           child: SlideTransition(
             position: _slideAnimation,
-            child: Column(
-              children: [
-                _buildAppBar(filteredAsync),
-                _buildStats(allAsync),
-                _buildFilters(selectedFilter),
-                Expanded(child: _buildWatchlist(filteredAsync)),
-              ],
+            child: filteredAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.error_outline, color: AppColors.error, size: 48),
+                    SizedBox(height: 12),
+                    Text('Failed to load watchlist',
+                        style: AppTextStyles.body.copyWith(color: AppColors.error)),
+                    SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () =>
+                          ref.read(watchlistProvider.notifier).loadWatchlist(),
+                      child: Text('Retry', style: TextStyle(color: AppColors.accent)),
+                    ),
+                  ],
+                ),
+              ),
+              data: (filteredItems) {
+                final allItems = allAsync.valueOrNull ?? [];
+                return Column(
+                  children: [
+                    _buildAppBar(filteredItems),
+                    _buildStats(allItems),
+                    _buildFilters(selectedFilter),
+                    Expanded(child: _buildWatchlist(filteredItems)),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -150,8 +207,7 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
     );
   }
 
-  Widget _buildAppBar(AsyncValue<List<Movie>> filteredAsync) {
-    final count = filteredAsync.maybeWhen(data: (m) => m.length, orElse: () => 0);
+  Widget _buildAppBar(List<Movie> filteredItems) {
     return CustomAppBar(
       title: 'My Watchlist',
       subtitle: '$count items to watch',
@@ -174,39 +230,60 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
     );
   }
 
-  Widget _buildStats(AsyncValue<List<Movie>> allAsync) {
-    final items = allAsync.maybeWhen(data: (m) => m, orElse: () => <Movie>[]);
+  Widget _buildStats(List<Movie> allItems) {
     final movieCount =
-        items.where((i) => i.type == ContentType.movie).length;
+        allItems.where((item) => item.type == ContentType.movie).length;
     final tvShowCount =
-        items.where((i) => i.type == ContentType.tvShow).length;
+        allItems.where((item) => item.type == ContentType.tvShow).length;
     final totalHours = movieCount * 2.5 + tvShowCount * 10;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20),
-      child: LayoutBuilder(builder: (context, constraints) {
-        double statsWidth;
-        if (constraints.maxWidth < 400) {
-          statsWidth = constraints.maxWidth * 0.95;
-        } else if (constraints.maxWidth < 800) {
-          statsWidth = 360;
-        } else if (constraints.maxWidth < 1200) {
-          statsWidth = 420;
-        } else {
-          statsWidth = 480;
-        }
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          double statsWidth;
+          if (constraints.maxWidth < 400) {
+            statsWidth = constraints.maxWidth * 0.95;
+          } else if (constraints.maxWidth < 800) {
+            statsWidth = 360;
+          } else if (constraints.maxWidth < 1200) {
+            statsWidth = 420;
+          } else {
+            statsWidth = 480;
+          }
 
-        return Center(
-          child: Container(
-            width: statsWidth,
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.accent.withValues(alpha: 0.1),
-                  AppColors.accent.withValues(alpha: 0.05),
+          return Center(
+            child: Container(
+              width: statsWidth,
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.accent.withOpacity(0.1),
+                    AppColors.accent.withOpacity(0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border:
+                    Border.all(color: AppColors.accent.withOpacity(0.3), width: 1),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildStatItem(
+                        '${allItems.length}', 'Total Items', Icons.bookmark),
+                  ),
+                  Container(width: 1, height: 40, color: AppColors.cardBorder),
+                  Expanded(
+                    child: _buildStatItem(
+                        '${totalHours.toInt()}h', 'Watch Time', Icons.access_time),
+                  ),
+                  Container(width: 1, height: 40, color: AppColors.cardBorder),
+                  Expanded(
+                    child: _buildStatItem('$movieCount', 'Movies', Icons.movie),
+                  ),
                 ],
               ),
               borderRadius: BorderRadius.circular(20),
@@ -262,63 +339,74 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
         scrollDirection: Axis.horizontal,
         padding: EdgeInsets.symmetric(horizontal: 20),
         child: Row(
-          children: [
-            _filterChip('All', WatchlistFilter.all, selectedFilter),
-            _filterChip('Movies', WatchlistFilter.movies, selectedFilter),
-            _filterChip('TV Shows', WatchlistFilter.tvShows, selectedFilter),
-            _filterChip('Recently Added', WatchlistFilter.recentlyAdded,
-                selectedFilter),
-          ],
+          children: filters.map((label) {
+            final filter = _filterFromLabel(label);
+            final isSelected = selectedFilter == filter;
+            return GestureDetector(
+              onTap: () =>
+                  ref.read(watchlistFilterProvider.notifier).state = filter,
+              child: Container(
+                margin: EdgeInsets.only(right: 12),
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.accent : AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(25),
+                  border: Border.all(
+                    color: isSelected ? AppColors.accent : AppColors.cardBorder,
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: isSelected
+                        ? AppColors.background
+                        : AppColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ),
     );
   }
 
-  Widget _filterChip(
-      String label, WatchlistFilter filter, WatchlistFilter selectedFilter) {
-    final isSelected = selectedFilter == filter;
-    return GestureDetector(
-      onTap: () =>
-          ref.read(watchlistFilterProvider.notifier).state = filter,
-      child: Container(
-        margin: EdgeInsets.only(right: 12),
-        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.accent : AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(
-            color: isSelected ? AppColors.accent : AppColors.cardBorder,
-            width: 1,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? AppColors.background : AppColors.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _buildWatchlist(List<Movie> filteredItems) {
+    if (filteredItems.isEmpty) {
+      return EmptyState(
+        icon: Icons.bookmark_outline,
+        title: 'Your watchlist is empty',
+        subtitle: 'Start adding movies and shows\nyou want to watch later',
+        buttonText: 'Explore Movies',
+        onButtonPressed: () => Navigator.pop(context),
+      );
+    }
 
-  Widget _buildWatchlist(AsyncValue<List<Movie>> filteredAsync) {
-    return filteredAsync.when(
-      loading: () =>
-          Center(child: CircularProgressIndicator(color: AppColors.accent)),
-      error: (err, _) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, color: AppColors.error, size: 48),
-            SizedBox(height: 16),
-            Text('Failed to load watchlist', style: AppTextStyles.h3),
-            SizedBox(height: 8),
-            TextButton(
-              onPressed: () =>
-                  ref.read(watchlistProvider.notifier).loadWatchlist(),
-              child: Text('Retry', style: TextStyle(color: AppColors.accent)),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (isGridView) {
+          final screenWidth = constraints.maxWidth;
+          final maxWidth = screenWidth > 1400 ? 1400.0 : screenWidth;
+
+          return Center(
+            child: Container(
+              width: maxWidth,
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: _buildGridView(filteredItems, screenWidth),
+            ),
+          );
+        } else {
+          final maxWidth =
+              constraints.maxWidth > 800 ? 800.0 : constraints.maxWidth;
+
+          return Center(
+            child: Container(
+              width: maxWidth,
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: _buildListView(filteredItems),
             ),
           ],
         ),
@@ -361,7 +449,7 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
     );
   }
 
-  Widget _buildGridView(List<Movie> movies, double screenWidth) {
+  Widget _buildGridView(List<Movie> items, double screenWidth) {
     final columns = ResponsiveHelper.getGridColumns(screenWidth);
     final maxCardWidth = ResponsiveHelper.getMaxCardWidth(screenWidth);
 
@@ -373,11 +461,11 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
         mainAxisSpacing: 16,
         childAspectRatio: screenWidth < 500 ? 0.75 : 0.7,
       ),
-      itemCount: movies.length,
+      itemCount: items.length,
       itemBuilder: (context, index) {
         Widget card = MovieCard(
-          movie: movies[index],
-          onLongPress: () => _showItemDetails(movies[index]),
+          movie: items[index],
+          onLongPress: () => _showItemDetails(items[index]),
         );
         if (maxCardWidth != null) {
           card = ConstrainedBox(
@@ -390,14 +478,14 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
     );
   }
 
-  Widget _buildListView(List<Movie> movies) {
+  Widget _buildListView(List<Movie> items) {
     return ListView.builder(
       physics: BouncingScrollPhysics(),
-      itemCount: movies.length,
+      itemCount: items.length,
       itemBuilder: (context, index) {
         return MovieListItem(
-          movie: movies[index],
-          onLongPress: () => _showItemDetails(movies[index]),
+          movie: items[index],
+          onLongPress: () => _showItemDetails(items[index]),
           showDateAdded: true,
         );
       },

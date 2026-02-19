@@ -123,19 +123,19 @@ class WatchlistItemSheet extends StatelessWidget {
           Container(
             padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: AppColors.accent.withOpacity(0.2),
+              color: AppColors.cardBorder,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.accent, width: 1),
+              border: Border.all(color: AppColors.cardBorderLight, width: 1),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.star, color: AppColors.accent, size: 14),
+                Icon(Icons.bookmark, color: AppColors.accent, size: 14),
                 SizedBox(width: 4),
                 Text(
-                  movie.rating.toString(),
+                  movie.typeString,
                   style: TextStyle(
-                    color: AppColors.accent,
+                    color: AppColors.textSecondary,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),

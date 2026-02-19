@@ -111,7 +111,7 @@ class FirestoreService {
 
       await _watchlist(userId).doc(movie.id).set(watchlistItem);
 
-      // Update user stats (merge so it works even if user doc doesn't exist yet)
+      // Update user stats (set with merge so it works even if doc doesn't exist)
       await _userDoc(userId).set({
         'stats': {'watchlistCount': FieldValue.increment(1)},
         'updatedAt': FieldValue.serverTimestamp(),
@@ -131,7 +131,7 @@ class FirestoreService {
     try {
       await _watchlist(userId).doc(movieId).delete();
 
-      // Update user stats (merge so it works even if user doc doesn't exist yet)
+      // Update user stats
       await _userDoc(userId).set({
         'stats': {'watchlistCount': FieldValue.increment(-1)},
         'updatedAt': FieldValue.serverTimestamp(),
@@ -153,6 +153,9 @@ class FirestoreService {
         return Movie.fromJson(data);
       }).toList();
 
+      movies.sort((a, b) =>
+          (b.dateAdded ?? DateTime(0)).compareTo(a.dateAdded ?? DateTime(0)));
+
       return Right(movies);
     } catch (e) {
       return Left(ServerFailure(message: 'Failed to get watchlist: $e'));
@@ -163,10 +166,15 @@ class FirestoreService {
   Stream<List<Movie>> streamWatchlist(String userId) {
     return _watchlist(userId)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      return Movie.fromJson(data);
-    }).toList());
+        .map((snapshot) {
+          final movies = snapshot.docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return Movie.fromJson(data);
+          }).toList();
+          movies.sort((a, b) =>
+              (b.dateAdded ?? DateTime(0)).compareTo(a.dateAdded ?? DateTime(0)));
+          return movies;
+        });
   }
 
   // Check if in watchlist
@@ -252,6 +260,10 @@ class FirestoreService {
         return Movie.fromJson(data);
       }).toList();
 
+      // Sort client-side by dateRated descending
+      movies.sort((a, b) =>
+          (b.dateRated ?? DateTime(0)).compareTo(a.dateRated ?? DateTime(0)));
+
       return Right(movies);
     } catch (e) {
       return Left(ServerFailure(message: 'Failed to get ratings: $e'));
@@ -262,10 +274,15 @@ class FirestoreService {
   Stream<List<Movie>> streamRatings(String userId) {
     return _ratings(userId)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      return Movie.fromJson(data);
-    }).toList());
+        .map((snapshot) {
+          final movies = snapshot.docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return Movie.fromJson(data);
+          }).toList();
+          movies.sort((a, b) =>
+              (b.dateRated ?? DateTime(0)).compareTo(a.dateRated ?? DateTime(0)));
+          return movies;
+        });
   }
 
   // ============ Favorites Methods ============
@@ -284,10 +301,10 @@ class FirestoreService {
       await _favorites(userId).doc(movie.id).set(favoriteItem);
 
       // Update user stats
-      await _userDoc(userId).update({
-        'stats.favoritesCount': FieldValue.increment(1),
+      await _userDoc(userId).set({
+        'stats': {'favoritesCount': FieldValue.increment(1)},
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
 
       return const Right(null);
     } catch (e) {
@@ -304,10 +321,10 @@ class FirestoreService {
       await _favorites(userId).doc(movieId).delete();
 
       // Update user stats
-      await _userDoc(userId).update({
-        'stats.favoritesCount': FieldValue.increment(-1),
+      await _userDoc(userId).set({
+        'stats': {'favoritesCount': FieldValue.increment(-1)},
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
 
       return const Right(null);
     } catch (e) {

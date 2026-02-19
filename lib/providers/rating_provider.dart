@@ -3,15 +3,22 @@ import '../data/models/movie.dart';
 import '../data/models/rating.dart';
 import '../data/repositories/rating_repository.dart';
 import '../core/di/injection_container.dart';
+import 'auth_provider.dart';
 
 // Rating repository provider
 final ratingRepositoryProvider = Provider<RatingRepository>((ref) {
   return sl<RatingRepository>();
 });
 
-// Ratings state provider
+// Ratings state provider — invalidated automatically on every auth change
+// so guest and signed-in users never share cached data.
 final ratingsProvider = StateNotifierProvider<RatingsNotifier, AsyncValue<List<Movie>>>(
-      (ref) => RatingsNotifier(ref.watch(ratingRepositoryProvider)),
+  (ref) {
+    // Watch auth state: when the user changes this provider is recreated,
+    // its notifier is disposed, and loadRatings() runs fresh for the new user.
+    ref.watch(authStateProvider);
+    return RatingsNotifier(ref.watch(ratingRepositoryProvider));
+  },
 );
 
 // Rating sort provider

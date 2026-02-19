@@ -2,15 +2,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/movie.dart';
 import '../data/repositories/watchlist_repository.dart';
 import '../core/di/injection_container.dart';
+import 'auth_provider.dart';
 
 // Watchlist repository provider
 final watchlistRepositoryProvider = Provider<WatchlistRepository>((ref) {
   return sl<WatchlistRepository>();
 });
 
-// Watchlist state provider
+// Watchlist state provider — invalidated automatically on every auth change
+// so guest and signed-in users never share cached data.
 final watchlistProvider = StateNotifierProvider<WatchlistNotifier, AsyncValue<List<Movie>>>(
-      (ref) => WatchlistNotifier(ref.watch(watchlistRepositoryProvider)),
+  (ref) {
+    // Watch auth state: when the user changes this provider is recreated,
+    // its notifier is disposed, and loadWatchlist() runs fresh for the new user.
+    ref.watch(authStateProvider);
+    return WatchlistNotifier(ref.watch(watchlistRepositoryProvider));
+  },
 );
 
 // Filter provider for watchlist

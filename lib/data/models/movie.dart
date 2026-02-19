@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum ContentType { movie, tvShow }
 
 class Movie {
@@ -67,6 +69,14 @@ class Movie {
     );
   }
 
+  // Handles both Firestore Timestamp and ISO-8601 String
+  static DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is String) return DateTime.tryParse(value);
+    return null;
+  }
+
   factory Movie.fromJson(Map<String, dynamic> json) {
     return Movie(
       id: json['id'] ?? '',
@@ -79,14 +89,10 @@ class Movie {
       synopsis: json['synopsis'],
       posterUrl: json['posterUrl'],
       isInWatchlist: json['isInWatchlist'] ?? false,
-      dateAdded: json['dateAdded'] != null
-          ? DateTime.parse(json['dateAdded'])
-          : null,
+      dateAdded: _parseDate(json['dateAdded']),
       userRating: json['userRating']?.toDouble(),
       review: json['review'],
-      dateRated: json['dateRated'] != null
-          ? DateTime.parse(json['dateRated'])
-          : null,
+      dateRated: _parseDate(json['dateRated']),
     );
   }
 

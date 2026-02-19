@@ -1,3 +1,4 @@
+// lib/core/di/injection_container.dart
 import 'package:get_it/get_it.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,12 +11,16 @@ import '../utils/logger.dart';
 import '../../data/repositories/movie_repository.dart';
 import '../../data/repositories/watchlist_repository.dart';
 import '../../data/repositories/rating_repository.dart';
-import '../../data/repositories/genre_repository.dart';
 
 import '../../data/datasources/remote_data_source.dart';
-import '../../data/datasources/local_data_source.dart';
 import '../../data/datasources/remote_data_source_impl.dart';
 import '../../data/repositories/movie_repository_impl.dart';
+import '../../data/repositories/firebase_watchlist_repository.dart';
+import '../../data/repositories/firebase_rating_repository.dart';
+
+// Firebase services
+import '../../data/services/firebase_auth_service.dart';
+import '../../data/services/firestore_service.dart';
 
 final sl = GetIt.instance;
 
@@ -25,6 +30,9 @@ Future<void> init() async {
 
   // Core
   _initCore();
+
+  // Firebase services
+  _initFirebaseServices();
 
   // Data sources
   _initDataSources();
@@ -45,6 +53,14 @@ void _initCore() {
 
   // Utils
   sl.registerLazySingleton(() => Logger());
+}
+
+void _initFirebaseServices() {
+  // Firebase Auth Service
+  sl.registerLazySingleton(() => FirebaseAuthService());
+
+  // Firestore Service
+  sl.registerLazySingleton(() => FirestoreService());
 }
 
 void _initDataSources() {
@@ -70,24 +86,22 @@ void _initRepositories() {
     ),
   );
 
-  // Watchlist Repository
-  // TODO: Implement WatchlistRepositoryImpl when you create local storage
-  // sl.registerLazySingleton<WatchlistRepository>(
-  //   () => WatchlistRepositoryImpl(
-  //     localDataSource: sl(),
-  //   ),
-  // );
+  // Watchlist Repository (Firebase)
+  sl.registerLazySingleton<WatchlistRepository>(
+    () => FirebaseWatchlistRepository(
+      firestoreService: sl(),
+    ),
+  );
 
-  // Rating Repository
-  // TODO: Implement RatingRepositoryImpl when you create local storage
-  // sl.registerLazySingleton<RatingRepository>(
-  //   () => RatingRepositoryImpl(
-  //     localDataSource: sl(),
-  //   ),
-  // );
+  // Rating Repository (Firebase)
+  sl.registerLazySingleton<RatingRepository>(
+    () => FirebaseRatingRepository(
+      firestoreService: sl(),
+    ),
+  );
 
   // Genre Repository
-  // TODO: Implement GenreRepositoryImpl when you create local storage
+  // TODO: Implement GenreRepositoryImpl when local data source is ready
   // sl.registerLazySingleton<GenreRepository>(
   //   () => GenreRepositoryImpl(
   //     remoteDataSource: sl(),
@@ -97,11 +111,8 @@ void _initRepositories() {
 }
 
 void _initProviders() {
-  // TODO: Register your state management providers here
-  // Example with Riverpod or Provider
-  // sl.registerFactory(() => MovieProvider(movieRepository: sl()));
-  // sl.registerFactory(() => WatchlistProvider(watchlistRepository: sl()));
-  // sl.registerFactory(() => RatingProvider(ratingRepository: sl()));
+  // Providers are registered in their respective provider files using Riverpod
+  // This section is for any additional non-Riverpod dependencies
 }
 
 Future<void> _initExternal() async {

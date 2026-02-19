@@ -1,8 +1,11 @@
+// lib/main.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'dart:io' show Platform;
+
 
 // Dependency injection
 import 'package:cine_nest/core/di/injection_container.dart' as di;
@@ -12,17 +15,27 @@ import 'package:cine_nest/UI/screens/home/home_screen.dart';
 import 'package:cine_nest/UI/screens/watchlist/watchlist_screen.dart';
 import 'package:cine_nest/UI/screens/ratings/ratings_screen.dart';
 import 'package:cine_nest/UI/screens/api_test_screen.dart';
+import 'package:cine_nest/UI/screens/auth/login_screen.dart';
+import 'package:cine_nest/UI/screens/auth/signup_screen.dart';
+import 'package:cine_nest/UI/screens/auth/auth_wrapper.dart';
 import 'package:cine_nest/core/constants/colors.dart';
 
 // Conditionally import window_manager only if available
 import 'package:window_manager/window_manager.dart'
 if (dart.library.html) 'package:cine_nest/stubs/window_manager_stub.dart';
 
+import 'firebase_options.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Load environment variables
   await dotenv.load(fileName: ".env");
+
+  // Initialize Firebase with the auto-generated options
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // Initialize dependency injection
   await di.init();
@@ -62,11 +75,11 @@ void main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
       title: 'CineNest',
       theme: ThemeData(
@@ -85,10 +98,16 @@ class MyApp extends StatelessWidget {
         ),
       ),
       debugShowCheckedModeBanner: false,
-      initialRoute: '/home',
+      initialRoute: '/',
       onGenerateRoute: (settings) {
         // Custom route transitions for better performance
         switch (settings.name) {
+          case '/':
+            return _createRoute(AuthWrapper(), settings);
+          case '/login':
+            return _createRoute(LoginScreen(), settings);
+          case '/signup':
+            return _createRoute(SignupScreen(), settings);
           case '/home':
             return _createRoute(HomeScreen(), settings);
           case '/watchlist':
@@ -98,10 +117,10 @@ class MyApp extends StatelessWidget {
           case '/test':
             return _createRoute(ApiTestScreen(), settings);
           default:
-            return _createRoute(HomeScreen(), settings);
+            return _createRoute(AuthWrapper(), settings);
         }
       },
-      home: HomeScreen(),
+      home: AuthWrapper(),
     );
   }
 

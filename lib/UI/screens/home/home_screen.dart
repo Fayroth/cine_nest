@@ -9,6 +9,7 @@ import '../../../data/datasources/remote_data_source_impl.dart';
 import '../../../data/models/movie.dart';
 import '../../../data/models/genre.dart';
 import '../../../providers/movie_provider.dart';
+import '../../../providers/auth_provider.dart';
 import '../../widgets/cards/genre_card.dart';
 import '../../widgets/cards/movie_card.dart';
 import '../../widgets/dialogs/movie_details_sheet.dart';
@@ -391,35 +392,162 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
               ),
             )
           else
-            ScaleTransition(
-              scale: Tween<double>(begin: 1.0, end: 0.0).animate(_searchController),
-              child: Container(
-                width: 48,
-                height: 48,
-                child: Material(
-                  color: AppColors.cardBackground,
-                  borderRadius: BorderRadius.circular(16),
-                  child: InkWell(
-                    onTap: _toggleSearch,
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      decoration: BoxDecoration(
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Search button
+                ScaleTransition(
+                  scale: Tween<double>(begin: 1.0, end: 0.0).animate(_searchController),
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    child: Material(
+                      color: AppColors.cardBackground,
+                      borderRadius: BorderRadius.circular(16),
+                      child: InkWell(
+                        onTap: _toggleSearch,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.cardBorder, width: 1),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.search,
-                          color: AppColors.accent,
-                          size: 24,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.cardBorder, width: 1),
+                          ),
+                          child: Center(
+                            child: Icon(
+                              Icons.search,
+                              color: AppColors.accent,
+                              size: 24,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
+                SizedBox(width: 10),
+                // User account button
+                _buildUserMenuButton(),
+              ],
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildUserMenuButton() {
+    final authState = ref.watch(authStateProvider);
+    final user = authState.maybeWhen(data: (u) => u, orElse: () => null);
+    final isGuest = user?.isAnonymous ?? false;
+    final displayName = (user?.displayName?.isNotEmpty == true)
+        ? user!.displayName!
+        : (isGuest ? 'Guest' : (user?.email ?? 'User'));
+    final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
+
+    return PopupMenuButton<String>(
+      offset: const Offset(0, 54),
+      color: AppColors.cardBackground,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: AppColors.cardBorder, width: 1),
+      ),
+      onSelected: (value) {
+        if (value == 'signout') {
+          // Must not be async here — PopupMenuButton.onSelected is void.
+          // Schedule the sign-out after the current frame so the menu closes cleanly.
+          Future.microtask(() => ref.read(authNotifierProvider.notifier).signOut());
+        }
+      },
+      itemBuilder: (context) => [
+        // Header item — not selectable
+        PopupMenuItem<String>(
+          enabled: false,
+          height: 56,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                isGuest ? 'Guest User' : (user?.displayName ?? 'User'),
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              if (!isGuest && user?.email != null)
+                Text(
+                  user!.email!,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              if (isGuest)
+                Text(
+                  'Browsing as guest',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        PopupMenuDivider(),
+        if (isGuest)
+          PopupMenuItem<String>(
+            value: 'signout',
+            child: Row(
+              children: [
+                Icon(Icons.login, color: AppColors.accent, size: 18),
+                SizedBox(width: 10),
+                Text(
+                  'Sign in / Register',
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                ),
+              ],
+            ),
+          )
+        else
+          PopupMenuItem<String>(
+            value: 'signout',
+            child: Row(
+              children: [
+                Icon(Icons.logout, color: AppColors.error, size: 18),
+                SizedBox(width: 10),
+                Text(
+                  'Sign out',
+                  style: TextStyle(color: AppColors.error, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+      ],
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: isGuest
+              ? AppColors.cardBackground
+              : AppColors.accent.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isGuest ? AppColors.cardBorder : AppColors.accent,
+            width: 1,
+          ),
+        ),
+        child: Center(
+          child: isGuest
+              ? Icon(Icons.person_outline, color: AppColors.textSecondary, size: 22)
+              : Text(
+                  initial,
+                  style: TextStyle(
+                    color: AppColors.accent,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+        ),
       ),
     );
   }

@@ -36,15 +36,14 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-          parent: _animationController, curve: Curves.easeOutCubic),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
 
     _slideAnimation = Tween<Offset>(
       begin: Offset(0, 0.1),
       end: Offset.zero,
-    ).animate(
-        CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic));
+    ).animate(CurvedAnimation(
+        parent: _animationController, curve: Curves.easeOutCubic));
 
     _animationController.forward();
   }
@@ -110,8 +109,7 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child:
-                Text('Later', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Later', style: TextStyle(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () {
@@ -131,30 +129,21 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
 
     if (!mounted) return;
 
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Removed from watchlist'),
-          backgroundColor: AppColors.cardBorder,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          action: SnackBarAction(
-            label: 'Undo',
-            textColor: AppColors.accent,
-            onPressed: () => notifier.addToWatchlist(movie),
-          ),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to remove from watchlist'),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success ? 'Removed from watchlist' : 'Failed to remove from watchlist'),
+        backgroundColor: success ? AppColors.cardBorder : AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        action: success
+            ? SnackBarAction(
+                label: 'Undo',
+                textColor: AppColors.accent,
+                onPressed: () => notifier.addToWatchlist(movie),
+              )
+            : null,
+      ),
+    );
   }
 
   @override
@@ -210,7 +199,7 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
   Widget _buildAppBar(List<Movie> filteredItems) {
     return CustomAppBar(
       title: 'My Watchlist',
-      subtitle: '$count items to watch',
+      subtitle: '${filteredItems.length} items to watch',
       trailing: GestureDetector(
         onTap: () => setState(() => isGridView = !isGridView),
         child: Container(
@@ -231,80 +220,52 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
   }
 
   Widget _buildStats(List<Movie> allItems) {
-    final movieCount =
-        allItems.where((item) => item.type == ContentType.movie).length;
-    final tvShowCount =
-        allItems.where((item) => item.type == ContentType.tvShow).length;
+    final movieCount = allItems.where((i) => i.type == ContentType.movie).length;
+    final tvShowCount = allItems.where((i) => i.type == ContentType.tvShow).length;
     final totalHours = movieCount * 2.5 + tvShowCount * 10;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          double statsWidth;
-          if (constraints.maxWidth < 400) {
-            statsWidth = constraints.maxWidth * 0.95;
-          } else if (constraints.maxWidth < 800) {
-            statsWidth = 360;
-          } else if (constraints.maxWidth < 1200) {
-            statsWidth = 420;
-          } else {
-            statsWidth = 480;
-          }
+      child: LayoutBuilder(builder: (context, constraints) {
+        double statsWidth;
+        if (constraints.maxWidth < 400) {
+          statsWidth = constraints.maxWidth * 0.95;
+        } else if (constraints.maxWidth < 800) {
+          statsWidth = 360;
+        } else if (constraints.maxWidth < 1200) {
+          statsWidth = 420;
+        } else {
+          statsWidth = 480;
+        }
 
-          return Center(
-            child: Container(
-              width: statsWidth,
-              padding: EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.accent.withOpacity(0.1),
-                    AppColors.accent.withOpacity(0.05),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                border:
-                    Border.all(color: AppColors.accent.withOpacity(0.3), width: 1),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildStatItem(
-                        '${allItems.length}', 'Total Items', Icons.bookmark),
-                  ),
-                  Container(width: 1, height: 40, color: AppColors.cardBorder),
-                  Expanded(
-                    child: _buildStatItem(
-                        '${totalHours.toInt()}h', 'Watch Time', Icons.access_time),
-                  ),
-                  Container(width: 1, height: 40, color: AppColors.cardBorder),
-                  Expanded(
-                    child: _buildStatItem('$movieCount', 'Movies', Icons.movie),
-                  ),
+        return Center(
+          child: Container(
+            width: statsWidth,
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.accent.withOpacity(0.1),
+                  AppColors.accent.withOpacity(0.05),
                 ],
               ),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                  color: AppColors.accent.withValues(alpha: 0.3), width: 1),
+              border: Border.all(color: AppColors.accent.withOpacity(0.3), width: 1),
             ),
             child: Row(
               children: [
                 Expanded(
-                  child: _buildStatItem(
-                      '${items.length}', 'Total Items', Icons.bookmark),
+                  child: _buildStatItem('${allItems.length}', 'Total Items', Icons.bookmark),
                 ),
                 Container(width: 1, height: 40, color: AppColors.cardBorder),
                 Expanded(
-                  child: _buildStatItem(
-                      '${totalHours.toInt()}h', 'Watch Time', Icons.access_time),
+                  child: _buildStatItem('${totalHours.toInt()}h', 'Watch Time', Icons.access_time),
                 ),
                 Container(width: 1, height: 40, color: AppColors.cardBorder),
                 Expanded(
-                  child: _buildStatItem(
-                      '$movieCount', 'Movies', Icons.movie),
+                  child: _buildStatItem('$movieCount', 'Movies', Icons.movie),
                 ),
               ],
             ),
@@ -359,9 +320,7 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
                 child: Text(
                   label,
                   style: TextStyle(
-                    color: isSelected
-                        ? AppColors.background
-                        : AppColors.textPrimary,
+                    color: isSelected ? AppColors.background : AppColors.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -385,68 +344,28 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen>
       );
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (isGridView) {
-          final screenWidth = constraints.maxWidth;
-          final maxWidth = screenWidth > 1400 ? 1400.0 : screenWidth;
-
-          return Center(
-            child: Container(
-              width: maxWidth,
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: _buildGridView(filteredItems, screenWidth),
-            ),
-          );
-        } else {
-          final maxWidth =
-              constraints.maxWidth > 800 ? 800.0 : constraints.maxWidth;
-
-          return Center(
-            child: Container(
-              width: maxWidth,
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: _buildListView(filteredItems),
-            ),
-          ],
-        ),
-      ),
-      data: (movies) {
-        if (movies.isEmpty) {
-          return EmptyState(
-            icon: Icons.bookmark_outline,
-            title: 'Your watchlist is empty',
-            subtitle: 'Start adding movies and shows\nyou want to watch later',
-            buttonText: 'Explore Movies',
-            onButtonPressed: () => Navigator.pop(context),
-          );
-        }
-
-        return LayoutBuilder(builder: (context, constraints) {
-          if (isGridView) {
-            final screenWidth = constraints.maxWidth;
-            final maxWidth = screenWidth > 1400 ? 1400.0 : screenWidth;
-            return Center(
-              child: Container(
-                width: maxWidth,
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: _buildGridView(movies, screenWidth),
-              ),
-            );
-          } else {
-            final maxWidth =
-                constraints.maxWidth > 800 ? 800.0 : constraints.maxWidth;
-            return Center(
-              child: Container(
-                width: maxWidth,
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: _buildListView(movies),
-              ),
-            );
-          }
-        });
-      },
-    );
+    return LayoutBuilder(builder: (context, constraints) {
+      if (isGridView) {
+        final screenWidth = constraints.maxWidth;
+        final maxWidth = screenWidth > 1400 ? 1400.0 : screenWidth;
+        return Center(
+          child: Container(
+            width: maxWidth,
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: _buildGridView(filteredItems, screenWidth),
+          ),
+        );
+      } else {
+        final maxWidth = constraints.maxWidth > 800 ? 800.0 : constraints.maxWidth;
+        return Center(
+          child: Container(
+            width: maxWidth,
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: _buildListView(filteredItems),
+          ),
+        );
+      }
+    });
   }
 
   Widget _buildGridView(List<Movie> items, double screenWidth) {

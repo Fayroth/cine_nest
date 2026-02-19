@@ -9,14 +9,16 @@ final watchlistRepositoryProvider = Provider<WatchlistRepository>((ref) {
   return sl<WatchlistRepository>();
 });
 
-// Watchlist state provider — invalidated automatically on every auth change
-// so guest and signed-in users never share cached data.
+// Watchlist state provider — keyed on the current user's uid.
+// Riverpod recreates this provider (and its notifier) whenever the uid changes,
+// which clears the in-memory list and triggers a fresh Firestore fetch.
 final watchlistProvider = StateNotifierProvider<WatchlistNotifier, AsyncValue<List<Movie>>>(
   (ref) {
-    // Watch auth state: when the user changes this provider is recreated,
-    // its notifier is disposed, and loadWatchlist() runs fresh for the new user.
-    ref.watch(authStateProvider);
-    return WatchlistNotifier(ref.watch(watchlistRepositoryProvider));
+    // Reading the uid makes this provider depend on the actual user identity.
+    // Switching accounts (including guest <-> signed-in) produces a different uid,
+    // so Riverpod disposes the old notifier and creates a new one automatically.
+    final uid = ref.watch(currentUserProvider)?.uid;
+    return WatchlistNotifier(ref.watch(watchlistRepositoryProvider), uid: uid);
   },
 );
 
@@ -63,12 +65,20 @@ enum WatchlistFilter {
 
 class WatchlistNotifier extends StateNotifier<AsyncValue<List<Movie>>> {
   final WatchlistRepository _repository;
+  final String? _uid;
 
-  WatchlistNotifier(this._repository) : super(const AsyncValue.loading()) {
+  WatchlistNotifier(this._repository, {required String? uid})
+      : _uid = uid,
+        super(const AsyncValue.loading()) {
     loadWatchlist();
   }
 
   Future<void> loadWatchlist() async {
+    // No user logged in — return empty list immediately, no Firestore call.
+    if (_uid == null) {
+      state = const AsyncValue.data([]);
+      return;
+    }
     try {
       state = const AsyncValue.loading();
       final result = await _repository.getWatchlist();

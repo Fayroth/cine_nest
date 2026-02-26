@@ -52,3 +52,9 @@ app.*.map.json
 # API Keys and Secrets
 **/api_keys.dart
 **/secrets.dart
+
+# Firebase config (contains API keys - generate locally with `flutterfire configure`)
+lib/firebase_options.dart
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+macos/Runner/GoogleService-Info.plist
